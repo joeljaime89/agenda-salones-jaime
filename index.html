@@ -353,7 +353,7 @@ function cargarCopiaLocal(){
    public.eventos
    "identificación"
    fecha
-   "salón"
+   salón
    hora
    datos (jsonb)
 ============================================================ */
@@ -374,7 +374,7 @@ async function cargarEventosDesdeNube(){
                 ...datos,
                 id:fila["identificación"],
                 fecha:fila.fecha,
-                salon:fila["salón"],
+                salon:fila[salón],
                 hora:fila.hora
             };
         });
@@ -430,7 +430,7 @@ async function guardarEventoEnNube(evento){
             .from("eventos")
             .update({
                 fecha:evento.fecha,
-                "salón":evento.salon,
+                salón:evento.salon,
                 hora:evento.hora,
                 datos
             })
@@ -444,7 +444,7 @@ async function guardarEventoEnNube(evento){
     const fila={
         "identificación":nuevoId,
         fecha:evento.fecha,
-        "salón":evento.salon,
+        salón:evento.salon,
         hora:evento.hora,
         datos
     };
