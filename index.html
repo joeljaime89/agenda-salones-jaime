@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agenda Salones Jaime</title>
+
+<!-- Supabase: biblioteca oficial para navegador vía CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+    margin:0;min-height:100vh;font-family:Arial,Helvetica,sans-serif;color:#222;
+    background:linear-gradient(180deg,#7b2cbf 0%,#9d4edd 25%,#e0b7ff 55%,#fff 100%);
+}
+header{
+    background:linear-gradient(135deg,#ffd000 0%,#ffb700 25%,#ff5e00 60%,#d90429 100%);
+    padding:20px 20px 25px;box-shadow:0 5px 20px rgba(0,0,0,.3);color:#fff;
+}
+.encabezado-contenido{max-width:1450px;margin:auto;text-align:center}
+.logos-principales{display:flex;justify-content:space-between;align-items:center;padding:0 45px;gap:30px}
+.logo-principal{width:170px;height:170px;object-fit:contain;filter:drop-shadow(0 5px 7px rgba(0,0,0,.3))}
+.titulo-principal{
+    margin:3px 0 4px;font-family:"Arial Rounded MT Bold","Trebuchet MS",Arial,sans-serif;
+    font-size:48px;font-weight:900;letter-spacing:1px;text-shadow:3px 3px 0 rgba(0,0,0,.18),0 5px 12px rgba(0,0,0,.25)
+}
+.subtitulo{margin:8px 0 0;font-size:18px;font-weight:bold}
+
+.contenedor-principal{width:100%;max-width:1450px;margin:auto;padding:18px 14px 50px}
+.resumen{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:14px}
+.tarjeta-resumen{background:rgba(255,255,255,.96);border-radius:15px;padding:15px;text-align:center;box-shadow:0 5px 16px rgba(0,0,0,.16)}
+.tarjeta-resumen h3{margin:0 0 7px;font-size:14px}.numero-resumen{font-size:24px;font-weight:900;color:#7b2cbf}
+
+.alertas{margin-bottom:14px}.alerta{
+    background:#fff3cd;border-left:6px solid #ffc107;border-radius:10px;padding:12px 14px;
+    margin-bottom:7px;box-shadow:0 2px 8px rgba(0,0,0,.1)
+}.alerta-hoy{background:#ffe3e3;border-left-color:#dc3545}
+
+.controles{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.boton{border:0;border-radius:9px;padding:10px 15px;cursor:pointer;font-weight:bold;font-size:14px;transition:.2s}
+.boton:hover{transform:translateY(-2px);box-shadow:0 4px 10px rgba(0,0,0,.15)}
+.boton-morado{background:#7b2cbf;color:#fff}.boton-verde{background:#198754;color:#fff}
+.boton-rojo{background:#dc3545;color:#fff}.boton-gris{background:#6c757d;color:#fff}
+.boton-azul{background:#1565c0;color:#fff}
+.estado-nube{font-size:13px;font-weight:900;text-align:center;color:#fff;margin:5px 0 8px}
+.titulo-mes{text-align:center;color:#fff;font-size:29px;font-weight:900;margin:8px 0 13px;text-shadow:0 3px 7px rgba(0,0,0,.25)}
+
+.calendario-contenedor{width:100%;overflow-x:auto;padding-bottom:12px}
+.calendario{min-width:1080px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 7px 25px rgba(0,0,0,.2)}
+.dias-semana{display:grid;grid-template-columns:repeat(7,1fr);background:linear-gradient(135deg,#1565c0,#1976d2);color:#fff}
+.dia-semana{text-align:center;padding:12px 6px;font-weight:900;border-right:1px solid rgba(255,255,255,.25)}
+.dias-mes{display:grid;grid-template-columns:repeat(7,1fr)}
+.dia{min-height:360px;background:#fafafa;border-right:1px solid #ddd;border-bottom:1px solid #ddd;padding:7px}
+.dia:hover{background:#f8f0ff}.dia-vacio{background:#eee}
+.numero-dia{font-size:18px;font-weight:900;margin-bottom:7px}
+
+/* 4 salones en cuadrícula 2 x 2 */
+.salones-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.bloque-salon{border-radius:9px;overflow:hidden;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.13);min-width:0}
+.bloque-shalom{border:2px solid #e3b900}.encabezado-shalom{background:linear-gradient(135deg,#ffe000,#ffad00);color:#553d00}
+.bloque-mundo{border:2px solid #d00000}.encabezado-mundo{background:linear-gradient(135deg,#ff3333,#a80000);color:#fff}
+.bloque-dios{border:2px solid #198754}.encabezado-dios{background:linear-gradient(135deg,#35c46a,#087f3e);color:#fff}
+.bloque-cuarto{border:2px solid #777}.encabezado-cuarto{background:linear-gradient(135deg,#777,#444);color:#fff}
+.encabezado-salon{padding:6px;display:flex;align-items:center;justify-content:space-between;gap:4px}
+.nombre-salon{font-size:11px;font-weight:900;line-height:1.1}.estado-salon{font-size:8px;font-weight:900;padding:3px 5px;border-radius:20px;background:rgba(255,255,255,.88);white-space:nowrap}
+.lista-horarios{padding:5px}.turno{border-radius:6px;padding:5px;margin-bottom:4px;cursor:pointer;font-size:9px;border:1px solid #ddd;transition:.15s}
+.turno:last-child{margin-bottom:0}.turno:hover{transform:scale(1.012)}
+.turno-libre{background:#e9f8ef;border-color:#198754}.turno-ocupado{background:#ffe8eb;border-color:#dc3545}
+.turno-hora{font-size:11px;font-weight:900}.turno-estado{margin-top:2px;font-weight:bold}
+.evento{color:#fff;border-radius:7px;margin-top:5px;padding:5px;display:flex;gap:5px;cursor:pointer;box-shadow:0 2px 5px rgba(0,0,0,.2)}
+.evento-shalom{background:linear-gradient(135deg,#ffd000,#ff9200);color:#3c2b00}
+.evento-mundo{background:linear-gradient(135deg,#ff3434,#a40000);color:#fff}
+.evento-dios{background:linear-gradient(135deg,#35c46a,#087f3e);color:#fff}
+.evento-cuarto{background:linear-gradient(135deg,#777,#444);color:#fff}
+.logo-evento{width:34px;height:34px;object-fit:contain;flex-shrink:0}.evento-info{min-width:0}
+.evento-hora{font-size:12px;font-weight:900}.evento-telefono{font-size:8px;margin-top:2px}.evento-deuda{font-size:8px;font-weight:900;margin-top:2px}
+
+.modal{display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.68);align-items:center;justify-content:center;padding:12px}
+.modal-contenido{width:100%;max-width:850px;max-height:95vh;overflow-y:auto;background:#fff;border-radius:17px;padding:23px;box-shadow:0 10px 35px rgba(0,0,0,.35)}
+.modal-titulo{margin:0 0 18px;color:#7b2cbf;font-size:25px}
+.grupo{margin-bottom:14px}.grupo label{display:block;font-weight:900;margin-bottom:6px}
+.grupo input,.grupo select,.grupo textarea{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:14px;outline:none}
+.grupo input:focus,.grupo select:focus,.grupo textarea:focus{border-color:#7b2cbf;box-shadow:0 0 0 2px rgba(123,44,191,.12)}
+.grupo textarea{min-height:105px;resize:vertical}
+.horarios-rapidos{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.boton-horario{background:#eee;border:2px solid #ccc;padding:12px;border-radius:8px;cursor:pointer;font-weight:900}
+.boton-horario.seleccionado{background:#7b2cbf;border-color:#5a189a;color:#fff}
+.disponibilidad{padding:12px;border-radius:10px;background:#f3f3f3;margin-bottom:14px}
+.disponibilidad-linea{padding:4px 0;font-weight:900}.libre{color:#198754}.ocupado{color:#dc3545}
+.extras{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}.extra{background:#f2f2f2;border-radius:8px;padding:10px;cursor:pointer}.extra:hover{background:#e7d7f7}
+.extra input{width:auto;margin-right:5px}.lista-empleados{margin-bottom:7px}.empleado{display:flex;gap:6px;margin-bottom:6px}.empleado input{flex:1}
+.resumen-pagos{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:11px}
+.caja-pago{background:#f4f4f4;border-radius:10px;padding:11px;text-align:center}.caja-pago strong{display:block;font-size:18px;margin-top:4px}
+.texto-verde{color:#198754}.texto-rojo{color:#dc3545}
+.historial{border:1px solid #ddd;border-radius:10px;overflow:hidden}.pago{display:flex;justify-content:space-between;align-items:center;padding:9px;border-bottom:1px solid #ddd}
+.pago:last-child{border-bottom:0}.pago-monto{font-weight:900;color:#198754}.pago-fecha{font-size:11px;color:#777}
+.form-pago{display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin-top:8px}
+.botones-modal{display:flex;gap:7px;flex-wrap:wrap;margin-top:18px}.botones-modal button{flex:1;min-width:130px}
+.ayuda-nube{background:#eef7ff;border-left:5px solid #1565c0;border-radius:9px;padding:10px;margin-bottom:12px;font-size:13px}
+
+@media(max-width:1100px){.resumen{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:750px){
+    .resumen{grid-template-columns:repeat(2,1fr)}
+    .logo-principal{width:125px;height:125px}.titulo-principal{font-size:32px}
+    .dia{min-height:340px}
+}
+@media(max-width:500px){
+    .resumen{grid-template-columns:1fr}.logos-principales{padding:0 5px;gap:8px}
+    .logo-principal{width:90px;height:90px}.titulo-principal{font-size:25px}
+    .extras,.horarios-rapidos,.resumen-pagos{grid-template-columns:1fr}.form-pago{grid-template-columns:1fr}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <div class="encabezado-contenido">
+        <div class="logos-principales">
+            <img src="IMG/logoP.png" class="logo-principal" alt="Logo Shalom">
+            <img src="IMG/logo1.png" class="logo-principal" alt="Logo Mundo Mágico">
+        </div>
+        <h1 class="titulo-principal">Agenda Salones Jaime</h1>
+        <div class="subtitulo">Agenda profesional de eventos</div>
+    </div>
+</header>
+
+<div class="contenedor-principal">
+
+<section class="resumen">
+    <div class="tarjeta-resumen"><h3>🎉 Eventos del mes</h3><div id="totalEventos" class="numero-resumen">0</div></div>
+    <div class="tarjeta-resumen"><h3>📅 Días ocupados</h3><div id="diasOcupados" class="numero-resumen">0</div></div>
+    <div class="tarjeta-resumen"><h3>💰 Facturación</h3><div id="facturacion" class="numero-resumen">$0</div></div>
+    <div class="tarjeta-resumen"><h3>⚠️ Dinero adeudado</h3><div id="dineroAdeudado" class="numero-resumen">$0</div></div>
+    <div class="tarjeta-resumen"><h3>📊 Ocupación</h3><div id="ocupacion" class="numero-resumen">0%</div></div>
+</section>
+
+<div id="alertas" class="alertas"></div>
+<div id="estadoNube" class="estado-nube">☁️ Conectando con la nube...</div>
+
+<div class="controles">
+    <button class="boton boton-morado" onclick="mesAnterior()">◀ Mes anterior</button>
+    <button class="boton boton-morado" onclick="irAHoy()">📅 Hoy</button>
+    <button class="boton boton-morado" onclick="mesSiguiente()">Mes siguiente ▶</button>
+    <button class="boton boton-verde" onclick="abrirNuevoEvento()">➕ Nuevo evento</button>
+    <button class="boton boton-azul" onclick="recargarDesdeNube()">☁️ Actualizar nube</button>
+</div>
+
+<h2 id="tituloMes" class="titulo-mes"></h2>
+
+<div class="calendario-contenedor">
+<div class="calendario">
+    <div class="dias-semana">
+        <div class="dia-semana">LUNES</div><div class="dia-semana">MARTES</div>
+        <div class="dia-semana">MIÉRCOLES</div><div class="dia-semana">JUEVES</div>
+        <div class="dia-semana">VIERNES</div><div class="dia-semana">SÁBADO</div><div class="dia-semana">DOMINGO</div>
+    </div>
+    <div id="calendario" class="dias-mes"></div>
+</div>
+</div>
+</div>
+
+<div id="modal" class="modal">
+<div class="modal-contenido">
+<h2 id="tituloModal" class="modal-titulo">Nuevo evento</h2>
+
+<div class="grupo">
+<label>📅 Fecha del evento</label>
+<input id="fecha" type="date" onchange="actualizarDisponibilidad()">
+</div>
+
+<div class="grupo">
+<label>🏠 Salón</label>
+<select id="salon" onchange="actualizarDisponibilidad()">
+    <option value="Shalom">🟡 SHALOM</option>
+    <option value="Mundo Mágico">🔴 MUNDO MÁGICO</option>
+    <option value="Dios es Real">🟢 DIOS ES REAL</option>
+    <option value="Salón">⚪ SALÓN</option>
+</select>
+</div>
+
+<div class="grupo">
+<label>🕐 Horario del evento</label>
+<div class="horarios-rapidos">
+    <button type="button" id="horario13" class="boton-horario" onclick="seleccionarHorario('13:00')">🕐 13:00</button>
+    <button type="button" id="horario17" class="boton-horario" onclick="seleccionarHorario('17:00')">🕔 17:00</button>
+    <button type="button" id="horario21" class="boton-horario" onclick="seleccionarHorario('21:00')">🕘 21:00</button>
+</div>
+</div>
+
+<div class="grupo">
+<label>🕐 Horario personalizado</label>
+<input id="hora" type="time" onchange="actualizarBotonesHorario();actualizarDisponibilidad();">
+</div>
+
+<div class="grupo">
+<label>⏱️ Duración</label>
+<select id="duracion">
+    <option value="3">3 horas</option><option value="4">4 horas</option>
+    <option value="5">5 horas</option><option value="6">6 horas</option>
+</select>
+</div>
+
+<div id="disponibilidadModal" class="disponibilidad">Seleccioná fecha y horario.</div>
+
+<div class="grupo">
+<label>📞 Número de teléfono</label>
+<input id="telefono" type="tel" placeholder="Ej: 2645108450">
+</div>
+
+<div class="grupo">
+<label>🎂 Nombre del cumpleañero / cliente</label>
+<input id="nombre" type="text" placeholder="Dato opcional">
+</div>
+
+<div class="grupo">
+<label>💰 Precio total del evento</label>
+<input id="precio" type="number" min="0" placeholder="Ej: 200000" oninput="actualizarResumenPago()">
+</div>
+
+<div class="resumen-pagos">
+    <div class="caja-pago">Precio total<strong id="precioResumen">$0</strong></div>
+    <div class="caja-pago">Total recibido<strong id="pagadoResumen" class="texto-verde">$0</strong></div>
+    <div class="caja-pago">Falta pagar<strong id="deudaResumen" class="texto-rojo">$0</strong></div>
+</div>
+
+<div class="grupo">
+<label>💵 Señas y pagos realizados</label>
+<div id="historialPagos" class="historial"></div>
+<div class="form-pago">
+    <input id="nuevoPago" type="number" min="0" placeholder="Monto recibido">
+    <input id="fechaPago" type="date">
+    <button type="button" class="boton boton-verde" onclick="agregarPago()">➕ Agregar pago</button>
+</div>
+</div>
+
+<div class="grupo">
+<label>🎪 Agregados / Extras</label>
+<div class="extras">
+    <label class="extra"><input id="extraToro" type="checkbox">🐂 Toro mecánico</label>
+    <label class="extra"><input id="extraMaquillaje" type="checkbox">🎨 Maquillaje</label>
+    <label class="extra"><input id="extraPochoclos" type="checkbox">🍿 Pochoclos</label>
+    <label class="extra"><input id="extraAlgodon" type="checkbox">🍭 Algodón de azúcar</label>
+    <label class="extra"><input id="extra360" type="checkbox">📸 Plataforma 360</label>
+    <label class="extra"><input id="extraSillas" type="checkbox">🪑 Sillas</label>
+    <label class="extra"><input id="extraMesas" type="checkbox">🪑 Mesas</label>
+    <label class="extra"><input id="extraMozo" type="checkbox">🍽️ Mozo</label>
+    <label class="extra"><input id="extraLicuados" type="checkbox">🥤 Licuados</label>
+    <label class="extra"><input id="extraChocolate" type="checkbox">🍫 Cascada de chocolate</label>
+</div>
+</div>
+
+<div class="grupo">
+<label>👨‍💼 Empleados que trabajarán</label>
+<div id="listaEmpleados" class="lista-empleados"></div>
+<button type="button" class="boton boton-morado" onclick="agregarEmpleado()">➕ Agregar empleado</button>
+</div>
+
+<div class="grupo">
+<label>📝 Información adicional del evento</label>
+<textarea id="informacion" placeholder="Decoración especial.
+Cantidad de personas.
+Pedido del cliente.
+Horario de llegada.
+Detalles importantes."></textarea>
+</div>
+
+<div class="botones-modal">
+    <button id="btnGuardar" class="boton boton-verde" onclick="guardarEvento()">💾 Guardar evento</button>
+    <button class="boton boton-gris" onclick="cerrarModal()">Cerrar</button>
+    <button id="btnEliminar" class="boton boton-rojo" onclick="eliminarEvento()">🗑️ Eliminar evento</button>
+</div>
+</div>
+</div>
+
+<script>
+/* ============================================================
+   SUPABASE
+   Solo se usa la URL y la CLAVE PUBLICABLE.
+   NUNCA pongas la clave secreta aquí.
+============================================================ */
+const SUPABASE_URL = "https://cflwhlqeqeoopzxapiwp.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Yiv69l-zObWSdrmTsqot9g_vsWG5mOj";
+
+const supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY,
+    {
+        auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}
+    }
+);
+
+const HORARIOS=["13:00","17:00","21:00"];
+const SALONES=[
+    {nombre:"Shalom",emoji:"🟡",clase:"shalom",logo:"IMG/logoP.png"},
+    {nombre:"Mundo Mágico",emoji:"🔴",clase:"mundo",logo:"IMG/logo1.png"},
+    {nombre:"Dios es Real",emoji:"🟢",clase:"dios",logo:""},
+    {nombre:"Salón",emoji:"⚪",clase:"cuarto",logo:""}
+];
+const MESES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+
+let eventos=[];
+let fechaActual=new Date();
+let eventoEditando=null;
+let pagosActuales=[];
+let cargandoNube=false;
+
+/* ============================================================
+   UTILIDADES
+============================================================ */
+function dinero(valor){
+    return new Intl.NumberFormat("es-AR",{style:"currency",currency:"ARS",maximumFractionDigits:0}).format(Number(valor)||0);
+}
+function obtenerFechaHoy(){
+    const h=new Date();
+    return h.getFullYear()+"-"+String(h.getMonth()+1).padStart(2,"0")+"-"+String(h.getDate()).padStart(2,"0");
+}
+function fechaTexto(fecha){
+    if(!fecha)return "";
+    const p=String(fecha).split("-");
+    return p.length===3?p[2]+"/"+p[1]+"/"+p[0]:fecha;
+}
+function totalPagado(evento){
+    if(!evento || !Array.isArray(evento.pagos))return 0;
+    return evento.pagos.reduce((t,p)=>t+Number(p.monto||0),0);
+}
+function deudaEvento(evento){
+    return Math.max(0,Number(evento?.precio||0)-totalPagado(evento));
+}
+function setEstadoNube(texto){
+    const el=document.getElementById("estadoNube");
+    if(el)el.textContent=texto;
+}
+
+/* ============================================================
+   COPIA LOCAL DE SEGURIDAD
+============================================================ */
+function guardarCopiaLocal(){
+    try{localStorage.setItem("agendaEventosBackup",JSON.stringify(eventos));}catch(e){}
+}
+function cargarCopiaLocal(){
+    try{
+        const datos=JSON.parse(localStorage.getItem("agendaEventosBackup")||"[]");
+        return Array.isArray(datos)?datos:[];
+    }catch(e){return [];}
+}
+
+/* ============================================================
+   SUPABASE: LEER
+   La tabla esperada es:
+   public.eventos
+   "identificación"
+   fecha
+   "salón"
+   hora
+   datos (jsonb)
+============================================================ */
+async function cargarEventosDesdeNube(){
+    setEstadoNube("☁️ Cargando eventos...");
+    try{
+        const {data,error}=await supabaseClient
+            .from("eventos")
+            .select("*")
+            .order("fecha",{ascending:true})
+            .order("hora",{ascending:true});
+
+        if(error)throw error;
+
+        eventos=(data||[]).map(fila=>{
+            const datos=(fila.datos && typeof fila.datos==="object")?fila.datos:{};
+            return {
+                ...datos,
+                id:fila["identificación"],
+                fecha:fila.fecha,
+                salon:fila["salón"],
+                hora:fila.hora
+            };
+        });
+
+        guardarCopiaLocal();
+        setEstadoNube("☁️ Sincronizado con la nube");
+        generarCalendario();
+    }catch(error){
+        console.error("Supabase:",error);
+        const respaldo=cargarCopiaLocal();
+        if(respaldo.length){
+            eventos=respaldo;
+            setEstadoNube("⚠️ Sin conexión: usando copia local");
+            generarCalendario();
+            alert("No se pudo conectar con Supabase. La agenda abrió la última copia local.");
+        }else{
+            setEstadoNube("❌ Error de conexión con la nube");
+            alert("No se pudo cargar la agenda desde Supabase.\n\nError real: " + (error?.message || error) + "\n\nCódigo: " + (error?.code || "sin código"));
+        }
+    }
+}
+async function recargarDesdeNube(){
+    await cargarEventosDesdeNube();
+}
+
+/* ============================================================
+   SUPABASE: GUARDAR / ACTUALIZAR
+============================================================ */
+function esUUID(valor){
+    return typeof valor === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(valor);
+}
+
+async function guardarEventoEnNube(evento){
+    const datos={
+        duracion:evento.duracion||3,
+        telefono:evento.telefono||"",
+        nombre:evento.nombre||"",
+        precio:Number(evento.precio||0),
+        pagos:Array.isArray(evento.pagos)?evento.pagos:[],
+        empleados:Array.isArray(evento.empleados)?evento.empleados:[],
+        informacion:evento.informacion||"",
+        extras:evento.extras||{}
+    };
+
+    /*
+       IMPORTANTE:
+       La tabla eventos usa id UUID. Para evitar problemas con IDs antiguos
+       guardados localmente, los registros nuevos reciben un UUID válido.
+       Los registros que ya vienen de Supabase se actualizan por su UUID.
+    */
+    if(esUUID(evento.id)){
+        const {error}=await supabaseClient
+            .from("eventos")
+            .update({
+                fecha:evento.fecha,
+                "salón":evento.salon,
+                hora:evento.hora,
+                datos
+            })
+            .eq("identificación",evento.id);
+
+        if(error)throw error;
+        return evento.id;
+    }
+
+    const nuevoId=crypto.randomUUID();
+    const fila={
+        "identificación":nuevoId,
+        fecha:evento.fecha,
+        "salón":evento.salon,
+        hora:evento.hora,
+        datos
+    };
+
+    const {error}=await supabaseClient
+        .from("eventos")
+        .insert(fila);
+
+    if(error)throw error;
+    return nuevoId;
+}
+
+async function borrarEventoEnNube(id){
+    const {error}=await supabaseClient.from("eventos").delete().eq("identificación",id);
+    if(error)throw error;
+}
+
+/* ============================================================
+   CALENDARIO
+============================================================ */
+function generarCalendario(){
+    const calendario=document.getElementById("calendario");
+    calendario.innerHTML="";
+    const año=fechaActual.getFullYear(),mes=fechaActual.getMonth();
+    document.getElementById("tituloMes").textContent=MESES[mes]+" "+año;
+
+    const primerDia=new Date(año,mes,1);
+    let posicion=primerDia.getDay();
+    if(posicion===0)posicion=7;
+    const cantidadDias=new Date(año,mes+1,0).getDate();
+
+    for(let i=1;i<posicion;i++){
+        const vacio=document.createElement("div");
+        vacio.className="dia dia-vacio";
+        calendario.appendChild(vacio);
+    }
+
+    for(let dia=1;dia<=cantidadDias;dia++){
+        const fecha=año+"-"+String(mes+1).padStart(2,"0")+"-"+String(dia).padStart(2,"0");
+        const contenedorDia=document.createElement("div");
+        contenedorDia.className="dia";
+
+        const numero=document.createElement("div");
+        numero.className="numero-dia";
+        numero.textContent=dia;
+        contenedorDia.appendChild(numero);
+
+        const grid=document.createElement("div");
+        grid.className="salones-grid";
+
+        SALONES.forEach(salon=>{
+            grid.appendChild(crearBloqueSalon(fecha,salon));
+        });
+
+        contenedorDia.appendChild(grid);
+        calendario.appendChild(contenedorDia);
+    }
+    actualizarResumen();
+}
+
+function crearBloqueSalon(fecha,salon){
+    const bloque=document.createElement("div");
+    bloque.className="bloque-salon bloque-"+salon.clase;
+
+    const encabezado=document.createElement("div");
+    encabezado.className="encabezado-salon encabezado-"+salon.clase;
+
+    const nombre=document.createElement("span");
+    nombre.className="nombre-salon";
+    nombre.textContent=salon.emoji+" "+salon.nombre;
+
+    const eventosSalon=eventos.filter(e=>e.fecha===fecha && e.salon===salon.nombre);
+    const estado=document.createElement("span");
+    estado.className="estado-salon";
+
+    if(eventosSalon.length===0)estado.textContent="🟢 LIBRE";
+    else if(eventosSalon.length<3)estado.textContent="🟡 "+eventosSalon.length+"/3";
+    else estado.textContent="🔴 3/3";
+
+    encabezado.appendChild(nombre);
+    encabezado.appendChild(estado);
+    bloque.appendChild(encabezado);
+
+    const lista=document.createElement("div");
+    lista.className="lista-horarios";
+
+    HORARIOS.forEach(hora=>crearTurno(lista,fecha,hora,salon));
+    eventosSalon.filter(e=>!HORARIOS.includes(e.hora)).forEach(e=>crearEventoVisual(lista,e,salon));
+
+    bloque.appendChild(lista);
+    return bloque;
+}
+
+function crearTurno(contenedor,fecha,hora,salon){
+    const evento=eventos.find(e=>e.fecha===fecha && e.hora===hora && e.salon===salon.nombre);
+    const turno=document.createElement("div");
+    turno.className=evento?"turno turno-ocupado":"turno turno-libre";
+
+    const horaElemento=document.createElement("div");
+    horaElemento.className="turno-hora";
+    horaElemento.textContent="🕐 "+hora;
+    turno.appendChild(horaElemento);
+
+    const estado=document.createElement("div");
+    estado.className="turno-estado";
+    estado.textContent=evento?"🔴 OCUPADO":"🟢 LIBRE";
+    turno.appendChild(estado);
+
+    if(evento){
+        const telefono=document.createElement("div");
+        telefono.textContent="📞 "+(evento.telefono||"Sin teléfono");
+        turno.appendChild(telefono);
+
+        const deuda=document.createElement("div");
+        deuda.className="evento-deuda";
+        deuda.textContent=deudaEvento(evento)>0?"💰 Debe "+dinero(deudaEvento(evento)):"✅ PAGADO";
+        turno.appendChild(deuda);
+
+        turno.onclick=e=>{e.stopPropagation();editarEvento(evento.id)};
+    }else{
+        turno.onclick=e=>{e.stopPropagation();abrirNuevoEvento(fecha,salon.nombre,hora)};
+    }
+    contenedor.appendChild(turno);
+}
+
+function crearEventoVisual(contenedor,evento,salon){
+    const tarjeta=document.createElement("div");
+    tarjeta.className="evento evento-"+salon.clase;
+
+    if(salon.logo){
+        const logo=document.createElement("img");
+        logo.className="logo-evento";
+        logo.src=salon.logo;
+        logo.onerror=function(){this.style.display="none"};
+        tarjeta.appendChild(logo);
+    }
+
+    const info=document.createElement("div");
+    info.className="evento-info";
+
+    const titulo=document.createElement("div");
+    titulo.className="evento-hora";
+    titulo.textContent="🕐 "+evento.hora;
+    info.appendChild(titulo);
+
+    const telefono=document.createElement("div");
+    telefono.className="evento-telefono";
+    telefono.textContent="📞 "+(evento.telefono||"Sin teléfono");
+    info.appendChild(telefono);
+
+    const deuda=document.createElement("div");
+    deuda.className="evento-deuda";
+    deuda.textContent=deudaEvento(evento)>0?"💰 Debe "+dinero(deudaEvento(evento)):"✅ PAGADO";
+    info.appendChild(deuda);
+
+    tarjeta.appendChild(info);
+    tarjeta.onclick=()=>editarEvento(evento.id);
+    contenedor.appendChild(tarjeta);
+}
+
+/* ============================================================
+   MODAL NUEVO / EDITAR
+============================================================ */
+function abrirNuevoEvento(fecha="",salon="Shalom",hora=""){
+    eventoEditando=null;
+    pagosActuales=[];
+    document.getElementById("tituloModal").textContent="➕ Nuevo evento";
+    document.getElementById("fecha").value=fecha;
+    document.getElementById("salon").value=salon;
+    document.getElementById("hora").value=hora;
+    document.getElementById("duracion").value="3";
+    document.getElementById("telefono").value="";
+    document.getElementById("nombre").value="";
+    document.getElementById("precio").value="";
+    document.getElementById("informacion").value="";
+    document.getElementById("listaEmpleados").innerHTML="";
+    limpiarExtras();
+    document.getElementById("btnEliminar").style.display="none";
+    document.getElementById("fechaPago").value=obtenerFechaHoy();
+    actualizarBotonesHorario();
+    mostrarHistorialPagos();
+    actualizarDisponibilidad();
+    document.getElementById("modal").style.display="flex";
+}
+
+function editarEvento(id){
+    const evento=eventos.find(e=>e.id===id);
+    if(!evento)return;
+
+    eventoEditando=id;
+    pagosActuales=Array.isArray(evento.pagos)?JSON.parse(JSON.stringify(evento.pagos)):[];
+    document.getElementById("tituloModal").textContent="✏️ Editar evento";
+    document.getElementById("fecha").value=evento.fecha;
+    document.getElementById("salon").value=evento.salon;
+    document.getElementById("hora").value=evento.hora;
+    document.getElementById("duracion").value=evento.duracion||3;
+    document.getElementById("telefono").value=evento.telefono||"";
+    document.getElementById("nombre").value=evento.nombre||"";
+    document.getElementById("precio").value=evento.precio||0;
+    document.getElementById("informacion").value=evento.informacion||"";
+    limpiarExtras();
+
+    const extras=evento.extras||{};
+    document.getElementById("extraToro").checked=!!extras.toro;
+    document.getElementById("extraMaquillaje").checked=!!extras.maquillaje;
+    document.getElementById("extraPochoclos").checked=!!extras.pochoclos;
+    document.getElementById("extraAlgodon").checked=!!extras.algodon;
+    document.getElementById("extra360").checked=!!extras.plataforma360;
+    document.getElementById("extraSillas").checked=!!extras.sillas;
+    document.getElementById("extraMesas").checked=!!extras.mesas;
+    document.getElementById("extraMozo").checked=!!extras.mozo;
+    document.getElementById("extraLicuados").checked=!!extras.licuados;
+    document.getElementById("extraChocolate").checked=!!extras.cascadaChocolate;
+
+    document.getElementById("listaEmpleados").innerHTML="";
+    (evento.empleados||[]).forEach(n=>agregarEmpleado(n));
+
+    document.getElementById("btnEliminar").style.display="block";
+    document.getElementById("fechaPago").value=obtenerFechaHoy();
+    actualizarBotonesHorario();
+    mostrarHistorialPagos();
+    actualizarDisponibilidad();
+    document.getElementById("modal").style.display="flex";
+}
+
+function limpiarExtras(){
+    document.querySelectorAll(".extra input").forEach(i=>i.checked=false);
+}
+
+/* ============================================================
+   HORARIOS / DISPONIBILIDAD
+============================================================ */
+function seleccionarHorario(hora){
+    document.getElementById("hora").value=hora;
+    actualizarBotonesHorario();
+    actualizarDisponibilidad();
+}
+function actualizarBotonesHorario(){
+    document.querySelectorAll(".boton-horario").forEach(b=>b.classList.remove("seleccionado"));
+    const hora=document.getElementById("hora").value;
+    if(hora==="13:00")document.getElementById("horario13").classList.add("seleccionado");
+    if(hora==="17:00")document.getElementById("horario17").classList.add("seleccionado");
+    if(hora==="21:00")document.getElementById("horario21").classList.add("seleccionado");
+}
+function actualizarDisponibilidad(){
+    const fecha=document.getElementById("fecha").value;
+    const hora=document.getElementById("hora").value;
+    const contenedor=document.getElementById("disponibilidadModal");
+    if(!fecha||!hora){contenedor.innerHTML="📅 Seleccioná fecha y horario.";return;}
+
+    contenedor.innerHTML=SALONES.map(s=>{
+        const ocupado=estaOcupado(fecha,hora,s.nombre);
+        return `<div class="disponibilidad-linea">${s.emoji} ${s.nombre}: <span class="${ocupado?"ocupado":"libre"}">${ocupado?"🔴 OCUPADO":"🟢 DISPONIBLE"}</span></div>`;
+    }).join("");
+}
+function estaOcupado(fecha,hora,salon){
+    return eventos.some(e=>e.fecha===fecha&&e.hora===hora&&e.salon===salon&&e.id!==eventoEditando);
+}
+
+/* ============================================================
+   EMPLEADOS
+============================================================ */
+function agregarEmpleado(nombre=""){
+    const lista=document.getElementById("listaEmpleados");
+    const fila=document.createElement("div");
+    fila.className="empleado";
+
+    const input=document.createElement("input");
+    input.type="text";input.placeholder="Nombre del empleado";input.value=nombre;
+
+    const eliminar=document.createElement("button");
+    eliminar.type="button";eliminar.className="boton boton-rojo";eliminar.textContent="❌";
+    eliminar.onclick=()=>fila.remove();
+
+    fila.appendChild(input);fila.appendChild(eliminar);lista.appendChild(fila);
+}
+function obtenerEmpleados(){
+    return Array.from(document.querySelectorAll("#listaEmpleados input"))
+        .map(i=>i.value.trim()).filter(Boolean);
+}
+
+/* ============================================================
+   PAGOS
+============================================================ */
+function agregarPago(){
+    const monto=Number(document.getElementById("nuevoPago").value);
+    const fecha=document.getElementById("fechaPago").value||obtenerFechaHoy();
+    if(!monto||monto<=0){alert("Ingresá un monto válido.");return;}
+
+    pagosActuales.push({id:Date.now(),monto,fecha});
+    document.getElementById("nuevoPago").value="";
+    mostrarHistorialPagos();
+}
+function mostrarHistorialPagos(){
+    const historial=document.getElementById("historialPagos");
+    historial.innerHTML="";
+
+    if(!pagosActuales.length){
+        historial.innerHTML='<div style="padding:12px;text-align:center;color:#777">Todavía no hay pagos registrados.</div>';
+        actualizarResumenPago();return;
+    }
+
+    pagosActuales.forEach((pago,indice)=>{
+        const fila=document.createElement("div");fila.className="pago";
+        const info=document.createElement("div");
+        info.innerHTML=`<div class="pago-monto">${dinero(pago.monto)}</div><div class="pago-fecha">📅 ${fechaTexto(pago.fecha)}</div>`;
+        const eliminar=document.createElement("button");
+        eliminar.className="boton boton-rojo";eliminar.textContent="Eliminar";
+        eliminar.onclick=()=>{pagosActuales.splice(indice,1);mostrarHistorialPagos()};
+        fila.appendChild(info);fila.appendChild(eliminar);historial.appendChild(fila);
+    });
+    actualizarResumenPago();
+}
+function actualizarResumenPago(){
+    const precio=Number(document.getElementById("precio").value)||0;
+    const pagado=pagosActuales.reduce((t,p)=>t+Number(p.monto||0),0);
+    const deuda=Math.max(0,precio-pagado);
+    document.getElementById("precioResumen").textContent=dinero(precio);
+    document.getElementById("pagadoResumen").textContent=dinero(pagado);
+    document.getElementById("deudaResumen").textContent=dinero(deuda);
+}
+
+/* ============================================================
+   GUARDAR EVENTO
+============================================================ */
+async function guardarEvento(){
+    const fecha=document.getElementById("fecha").value;
+    const salon=document.getElementById("salon").value;
+    const hora=document.getElementById("hora").value;
+
+    if(!fecha){alert("Seleccioná una fecha.");return}
+    if(!hora){alert("Seleccioná un horario.");return}
+
+    if(estaOcupado(fecha,hora,salon)){
+        alert("❌ Ese salón ya está ocupado en ese horario.");
+        return;
+    }
+
+    const evento={
+        id:eventoEditando||crypto.randomUUID(),
+        fecha,salon,hora,
+        duracion:Number(document.getElementById("duracion").value)||3,
+        telefono:document.getElementById("telefono").value.trim(),
+        nombre:document.getElementById("nombre").value.trim(),
+        precio:Number(document.getElementById("precio").value)||0,
+        pagos:JSON.parse(JSON.stringify(pagosActuales)),
+        empleados:obtenerEmpleados(),
+        informacion:document.getElementById("informacion").value.trim(),
+        extras:{
+            toro:document.getElementById("extraToro").checked,
+            maquillaje:document.getElementById("extraMaquillaje").checked,
+            pochoclos:document.getElementById("extraPochoclos").checked,
+            algodon:document.getElementById("extraAlgodon").checked,
+            plataforma360:document.getElementById("extra360").checked,
+            sillas:document.getElementById("extraSillas").checked,
+            mesas:document.getElementById("extraMesas").checked,
+            mozo:document.getElementById("extraMozo").checked,
+            licuados:document.getElementById("extraLicuados").checked,
+            cascadaChocolate:document.getElementById("extraChocolate").checked
+        }
+    };
+
+    const anterior=eventos.findIndex(e=>e.id===evento.id);
+    if(anterior>=0)eventos[anterior]=evento;else eventos.push(evento);
+
+    guardarCopiaLocal();
+    cerrarModal();
+    generarCalendario();
+
+    try{
+        setEstadoNube("☁️ Guardando en la nube...");
+        const idAnterior=evento.id;
+        const idNube=await guardarEventoEnNube(evento);
+
+        if(idNube && idNube!==idAnterior){
+            evento.id=idNube;
+            const indice=eventos.findIndex(e=>e.id===idAnterior);
+            if(indice>=0)eventos[indice]=evento;
+            generarCalendario();
+        }
+
+        guardarCopiaLocal();
+        setEstadoNube("☁️ Guardado y sincronizado");
+    }catch(error){
+        console.error("Error Supabase al guardar:",error);
+        setEstadoNube("⚠️ Guardado local; falta sincronizar");
+        alert("El evento quedó guardado en este dispositivo, pero Supabase no pudo guardarlo.\n\nError de Supabase: " + (error?.message || JSON.stringify(error)));
+    }
+}
+
+/* ============================================================
+   ELIMINAR
+============================================================ */
+async function eliminarEvento(){
+    if(!eventoEditando)return;
+    if(!confirm("¿Seguro que querés eliminar este evento?"))return;
+
+    const id=eventoEditando;
+    eventos=eventos.filter(e=>e.id!==id);
+    guardarCopiaLocal();
+    cerrarModal();
+    generarCalendario();
+
+    try{
+        setEstadoNube("☁️ Eliminando de la nube...");
+        await borrarEventoEnNube(id);
+        setEstadoNube("☁️ Sincronizado con la nube");
+    }catch(error){
+        console.error(error);
+        setEstadoNube("⚠️ Eliminado localmente; falta sincronizar");
+        alert("Se eliminó de esta copia, pero Supabase no pudo completar la eliminación.");
+    }
+}
+
+/* ============================================================
+   MODAL / MESES
+============================================================ */
+function cerrarModal(){document.getElementById("modal").style.display="none"}
+function mesAnterior(){fechaActual.setMonth(fechaActual.getMonth()-1);generarCalendario()}
+function mesSiguiente(){fechaActual.setMonth(fechaActual.getMonth()+1);generarCalendario()}
+function irAHoy(){fechaActual=new Date();generarCalendario()}
+
+/* ============================================================
+   RESUMEN / ALERTAS
+============================================================ */
+function actualizarResumen(){
+    const año=fechaActual.getFullYear(),mes=fechaActual.getMonth();
+    const eventosMes=eventos.filter(e=>{
+        const f=new Date(e.fecha+"T00:00:00");
+        return f.getFullYear()===año&&f.getMonth()===mes;
+    });
+
+    document.getElementById("totalEventos").textContent=eventosMes.length;
+    document.getElementById("diasOcupados").textContent=new Set(eventosMes.map(e=>e.fecha)).size;
+
+    const facturacion=eventosMes.reduce((t,e)=>t+Number(e.precio||0),0);
+    const deuda=eventosMes.reduce((t,e)=>t+deudaEvento(e),0);
+
+    document.getElementById("facturacion").textContent=dinero(facturacion);
+    document.getElementById("dineroAdeudado").textContent=dinero(deuda);
+
+    const diasMes=new Date(año,mes+1,0).getDate();
+    const capacidad=diasMes*HORARIOS.length*SALONES.length;
+    const ocupacion=capacidad?Math.round(eventosMes.length/capacidad*100):0;
+    document.getElementById("ocupacion").textContent=ocupacion+"%";
+
+    actualizarAlertas();
+}
+
+function actualizarAlertas(){
+    const contenedor=document.getElementById("alertas");
+    contenedor.innerHTML="";
+    const hoy=obtenerFechaHoy();
+
+    const deudores=eventos
+        .filter(e=>deudaEvento(e)>0)
+        .sort((a,b)=>(a.fecha+a.hora).localeCompare(b.fecha+b.hora));
+
+    deudores.forEach(evento=>{
+        const alerta=document.createElement("div");
+        alerta.className=evento.fecha===hoy?"alerta alerta-hoy":"alerta";
+        alerta.innerHTML=`${evento.fecha===hoy?"🔔":"⚠️"} <strong>${evento.salon}</strong> — 📅 ${fechaTexto(evento.fecha)} — 🕐 ${evento.hora} — 📞 ${evento.telefono||"Sin teléfono"} — 💰 Debe: <strong>${dinero(deudaEvento(evento))}</strong>${evento.fecha===hoy?" 🔔 EVENTO DE HOY":""}`;
+        alerta.style.cursor="pointer";
+        alerta.onclick=()=>editarEvento(evento.id);
+        contenedor.appendChild(alerta);
+    });
+}
+
+/* ============================================================
+   EVENTOS DE INTERFAZ
+============================================================ */
+document.getElementById("modal").addEventListener("click",function(event){
+    if(event.target===this)cerrarModal();
+});
+document.addEventListener("keydown",function(event){
+    if(event.key==="Escape")cerrarModal();
+});
+
+/* ============================================================
+   INICIO
+============================================================ */
+(async function iniciar(){
+    eventos=cargarCopiaLocal();
+    generarCalendario();
+    await cargarEventosDesdeNube();
+})();
+</script>
+</body>
+</html>
