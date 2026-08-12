@@ -351,10 +351,10 @@ function cargarCopiaLocal(){
    SUPABASE: LEER
    La tabla esperada es:
    public.eventos
-   "identificación"
-   fecha
-   "salón"
-   hora
+   id (int8/bigint)
+   fecha (text)
+   salon (text)
+   hora (text)
    datos (jsonb)
 ============================================================ */
 async function cargarEventosDesdeNube(){
@@ -362,7 +362,7 @@ async function cargarEventosDesdeNube(){
     try{
         const {data,error}=await supabaseClient
             .from("eventos")
-            .select("*")
+            .select("id,fecha,salon,hora,datos")
             .order("fecha",{ascending:true})
             .order("hora",{ascending:true});
 
@@ -392,7 +392,7 @@ async function cargarEventosDesdeNube(){
             alert("No se pudo conectar con Supabase. La agenda abrió la última copia local.");
         }else{
             setEstadoNube("❌ Error de conexión con la nube");
-            alert("No se pudo cargar la agenda desde Supabase.\n\nError real: " + (error?.message || error) + "\n\nCódigo: " + (error?.code || "sin código"));
+            alert("No se pudo cargar la agenda desde Supabase.\n\nRevisá que la tabla 'eventos' y sus permisos estén configurados.");
         }
     }
 }
@@ -404,14 +404,12 @@ async function recargarDesdeNube(){
    SUPABASE: GUARDAR / ACTUALIZAR
 ============================================================ */
 function esIdNumerico(valor){
-    if(valor===null || valor===undefined || valor==="")return false;
-    const numero=Number(valor);
-    return Number.isInteger(numero) && numero>0;
+    return (typeof valor === "number" && Number.isInteger(valor)) || (typeof valor === "string" && /^\d+$/.test(valor));
 }
 
 async function guardarEventoEnNube(evento){
     const datos={
-        duracion:Number(evento.duracion||3),
+        duracion:evento.duracion||3,
         telefono:evento.telefono||"",
         nombre:evento.nombre||"",
         precio:Number(evento.precio||0),
@@ -421,8 +419,13 @@ async function guardarEventoEnNube(evento){
         extras:evento.extras||{}
     };
 
-    // La tabla public.eventos usa id (int8), fecha, salon, hora y datos (jsonb).
-    // PostgreSQL genera el id automáticamente para eventos nuevos.
+    /*
+       IMPORTANTE:
+       La tabla public.eventos de este proyecto usa id BIGINT/INT8.
+       Por eso los eventos nuevos NO envían un UUID en la columna id: dejamos
+       que Supabase/PostgreSQL genere el número automáticamente.
+       Los eventos que ya vienen de Supabase se actualizan usando su id numérico.
+    */
     if(esIdNumerico(evento.id)){
         const {data,error}=await supabaseClient
             .from("eventos")
@@ -437,7 +440,7 @@ async function guardarEventoEnNube(evento){
             .single();
 
         if(error)throw error;
-        return data.id;
+        return data?.id ?? Number(evento.id);
     }
 
     const fila={
@@ -454,20 +457,12 @@ async function guardarEventoEnNube(evento){
         .single();
 
     if(error)throw error;
-    if(!data || data.id===undefined || data.id===null){
-        throw new Error("Supabase guardó el evento pero no devolvió su ID.");
-    }
+    if(data?.id===undefined || data?.id===null)throw new Error("Supabase no devolvió el id del evento nuevo.");
     return data.id;
 }
 
 async function borrarEventoEnNube(id){
-    if(!esIdNumerico(id)){
-        throw new Error("El evento no tiene un ID numérico válido de Supabase.");
-    }
-    const {error}=await supabaseClient
-        .from("eventos")
-        .delete()
-        .eq("id",Number(id));
+    const {error}=await supabaseClient.from("eventos").delete().eq("id",id);
     if(error)throw error;
 }
 
@@ -476,6 +471,7 @@ async function borrarEventoEnNube(id){
 ============================================================ */
 function generarCalendario(){
     const calendario=document.getElementById("calendario");
+    if(!calendario)return;
     calendario.innerHTML="";
     const año=fechaActual.getFullYear(),mes=fechaActual.getMonth();
     document.getElementById("tituloMes").textContent=MESES[mes]+" "+año;
@@ -640,7 +636,7 @@ function abrirNuevoEvento(fecha="",salon="Shalom",hora=""){
 }
 
 function editarEvento(id){
-    const evento=eventos.find(e=>String(e.id)===String(id));
+    const evento=eventos.find(e=>e.id===id);
     if(!evento)return;
 
     eventoEditando=id;
@@ -710,7 +706,7 @@ function actualizarDisponibilidad(){
     }).join("");
 }
 function estaOcupado(fecha,hora,salon){
-    return eventos.some(e=>e.fecha===fecha&&e.hora===hora&&e.salon===salon&&String(e.id)!==String(eventoEditando));
+    return eventos.some(e=>e.fecha===fecha&&e.hora===hora&&e.salon===salon&&e.id!==eventoEditando);
 }
 
 /* ============================================================
@@ -793,7 +789,7 @@ async function guardarEvento(){
     }
 
     const evento={
-        id:eventoEditando || null,
+        id:eventoEditando||crypto.randomUUID(),
         fecha,salon,hora,
         duracion:Number(document.getElementById("duracion").value)||3,
         telefono:document.getElementById("telefono").value.trim(),
@@ -816,7 +812,7 @@ async function guardarEvento(){
         }
     };
 
-    const anterior=eventos.findIndex(e=>String(e.id)===String(evento.id));
+    const anterior=eventos.findIndex(e=>e.id===evento.id);
     if(anterior>=0)eventos[anterior]=evento;else eventos.push(evento);
 
     guardarCopiaLocal();
@@ -828,9 +824,9 @@ async function guardarEvento(){
         const idAnterior=evento.id;
         const idNube=await guardarEventoEnNube(evento);
 
-        if(idNube && String(idNube)!==String(idAnterior)){
+        if(idNube && idNube!==idAnterior){
             evento.id=idNube;
-            const indice=eventos.findIndex(e=>String(e.id)===String(idAnterior));
+            const indice=eventos.findIndex(e=>e.id===idAnterior);
             if(indice>=0)eventos[indice]=evento;
             generarCalendario();
         }
@@ -852,7 +848,7 @@ async function eliminarEvento(){
     if(!confirm("¿Seguro que querés eliminar este evento?"))return;
 
     const id=eventoEditando;
-    eventos=eventos.filter(e=>String(e.id)!==String(id));
+    eventos=eventos.filter(e=>e.id!==id);
     guardarCopiaLocal();
     cerrarModal();
     generarCalendario();
