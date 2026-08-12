@@ -353,7 +353,7 @@ function cargarCopiaLocal(){
    public.eventos
    "identificación"
    fecha
-   salón
+   "salón"
    hora
    datos (jsonb)
 ============================================================ */
@@ -372,9 +372,9 @@ async function cargarEventosDesdeNube(){
             const datos=(fila.datos && typeof fila.datos==="object")?fila.datos:{};
             return {
                 ...datos,
-                id:fila["identificación"],
+                id:fila.id,
                 fecha:fila.fecha,
-                salon:fila[salón],
+                salon:fila.salon,
                 hora:fila.hora
             };
         });
@@ -403,13 +403,15 @@ async function recargarDesdeNube(){
 /* ============================================================
    SUPABASE: GUARDAR / ACTUALIZAR
 ============================================================ */
-function esUUID(valor){
-    return typeof valor === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(valor);
+function esIdNumerico(valor){
+    if(valor===null || valor===undefined || valor==="")return false;
+    const numero=Number(valor);
+    return Number.isInteger(numero) && numero>0;
 }
 
 async function guardarEventoEnNube(evento){
     const datos={
-        duracion:evento.duracion||3,
+        duracion:Number(evento.duracion||3),
         telefono:evento.telefono||"",
         nombre:evento.nombre||"",
         precio:Number(evento.precio||0),
@@ -419,46 +421,53 @@ async function guardarEventoEnNube(evento){
         extras:evento.extras||{}
     };
 
-    /*
-       IMPORTANTE:
-       La tabla eventos usa id UUID. Para evitar problemas con IDs antiguos
-       guardados localmente, los registros nuevos reciben un UUID válido.
-       Los registros que ya vienen de Supabase se actualizan por su UUID.
-    */
-    if(esUUID(evento.id)){
-        const {error}=await supabaseClient
+    // La tabla public.eventos usa id (int8), fecha, salon, hora y datos (jsonb).
+    // PostgreSQL genera el id automáticamente para eventos nuevos.
+    if(esIdNumerico(evento.id)){
+        const {data,error}=await supabaseClient
             .from("eventos")
             .update({
                 fecha:evento.fecha,
-                salón:evento.salon,
+                salon:evento.salon,
                 hora:evento.hora,
                 datos
             })
-            .eq("identificación",evento.id);
+            .eq("id",Number(evento.id))
+            .select("id")
+            .single();
 
         if(error)throw error;
-        return evento.id;
+        return data.id;
     }
 
-    const nuevoId=crypto.randomUUID();
     const fila={
-        "identificación":nuevoId,
         fecha:evento.fecha,
-        salón:evento.salon,
+        salon:evento.salon,
         hora:evento.hora,
         datos
     };
 
-    const {error}=await supabaseClient
+    const {data,error}=await supabaseClient
         .from("eventos")
-        .insert(fila);
+        .insert(fila)
+        .select("id")
+        .single();
 
     if(error)throw error;
-    return nuevoId;
+    if(!data || data.id===undefined || data.id===null){
+        throw new Error("Supabase guardó el evento pero no devolvió su ID.");
+    }
+    return data.id;
 }
 
 async function borrarEventoEnNube(id){
-    const {error}=await supabaseClient.from("eventos").delete().eq("identificación",id);
+    if(!esIdNumerico(id)){
+        throw new Error("El evento no tiene un ID numérico válido de Supabase.");
+    }
+    const {error}=await supabaseClient
+        .from("eventos")
+        .delete()
+        .eq("id",Number(id));
     if(error)throw error;
 }
 
@@ -631,7 +640,7 @@ function abrirNuevoEvento(fecha="",salon="Shalom",hora=""){
 }
 
 function editarEvento(id){
-    const evento=eventos.find(e=>e.id===id);
+    const evento=eventos.find(e=>String(e.id)===String(id));
     if(!evento)return;
 
     eventoEditando=id;
@@ -701,7 +710,7 @@ function actualizarDisponibilidad(){
     }).join("");
 }
 function estaOcupado(fecha,hora,salon){
-    return eventos.some(e=>e.fecha===fecha&&e.hora===hora&&e.salon===salon&&e.id!==eventoEditando);
+    return eventos.some(e=>e.fecha===fecha&&e.hora===hora&&e.salon===salon&&String(e.id)!==String(eventoEditando));
 }
 
 /* ============================================================
@@ -784,7 +793,7 @@ async function guardarEvento(){
     }
 
     const evento={
-        id:eventoEditando||crypto.randomUUID(),
+        id:eventoEditando || null,
         fecha,salon,hora,
         duracion:Number(document.getElementById("duracion").value)||3,
         telefono:document.getElementById("telefono").value.trim(),
@@ -807,7 +816,7 @@ async function guardarEvento(){
         }
     };
 
-    const anterior=eventos.findIndex(e=>e.id===evento.id);
+    const anterior=eventos.findIndex(e=>String(e.id)===String(evento.id));
     if(anterior>=0)eventos[anterior]=evento;else eventos.push(evento);
 
     guardarCopiaLocal();
@@ -819,9 +828,9 @@ async function guardarEvento(){
         const idAnterior=evento.id;
         const idNube=await guardarEventoEnNube(evento);
 
-        if(idNube && idNube!==idAnterior){
+        if(idNube && String(idNube)!==String(idAnterior)){
             evento.id=idNube;
-            const indice=eventos.findIndex(e=>e.id===idAnterior);
+            const indice=eventos.findIndex(e=>String(e.id)===String(id)Anterior);
             if(indice>=0)eventos[indice]=evento;
             generarCalendario();
         }
@@ -843,7 +852,7 @@ async function eliminarEvento(){
     if(!confirm("¿Seguro que querés eliminar este evento?"))return;
 
     const id=eventoEditando;
-    eventos=eventos.filter(e=>e.id!==id);
+    eventos=eventos.filter(e=>String(e.id)!==String(id));
     guardarCopiaLocal();
     cerrarModal();
     generarCalendario();
