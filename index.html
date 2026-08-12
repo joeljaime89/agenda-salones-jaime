@@ -830,7 +830,7 @@ async function guardarEvento(){
 
         if(idNube && String(idNube)!==String(idAnterior)){
             evento.id=idNube;
-            const indice=eventos.findIndex(e=>String(e.id)===String(id)Anterior);
+            const indice=eventos.findIndex(e=>String(e.id)===String(idAnterior));
             if(indice>=0)eventos[indice]=evento;
             generarCalendario();
         }
