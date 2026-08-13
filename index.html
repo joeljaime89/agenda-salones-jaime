@@ -151,6 +151,82 @@ header{
     .logo-principal{width:90px;height:90px}.titulo-principal{font-size:25px}
     .extras,.horarios-rapidos,.resumen-pagos{grid-template-columns:1fr}.form-pago{grid-template-columns:1fr}
 }
+
+/* ===== EXTRAS COMPACTOS ===== */
+.grupo .extra{
+    padding:4px 6px !important;
+    margin:2px 0 !important;
+    min-height:30px !important;
+    line-height:1.1 !important;
+    font-size:13px !important;
+}
+.grupo .extra input[type="checkbox"]{
+    transform:scale(.88);
+    margin-right:3px !important;
+}
+.grupo .precio-extra{
+    font-size:11px !important;
+}
+.grupo .cantidad-extra,
+.grupo .estado-extra{
+    min-height:24px !important;
+    height:26px !important;
+    padding:1px 4px !important;
+    font-size:11px !important;
+}
+
+/* ===== FORMULARIO DE RESERVA - DEGRADADO CELESTE ===== */
+.modal-contenido{
+    background:linear-gradient(145deg,#f8fdff 0%,#eaf9ff 45%,#dff4ff 100%) !important;
+    border:2px solid #b9e8f8 !important;
+    box-shadow:0 18px 45px rgba(52,156,190,.22) !important;
+}
+.modal-contenido .grupo{
+    background:rgba(255,255,255,.68);
+    border:1px solid rgba(142,211,232,.55);
+    border-radius:12px;
+    padding:9px;
+    box-shadow:0 2px 8px rgba(72,155,184,.08);
+}
+.modal-contenido input,
+.modal-contenido select,
+.modal-contenido textarea{
+    background:rgba(255,255,255,.88) !important;
+    border-color:#b8dfea !important;
+}
+.modal-contenido input:focus,
+.modal-contenido select:focus,
+.modal-contenido textarea:focus{
+    border-color:#62bddb !important;
+    box-shadow:0 0 0 3px rgba(98,189,219,.16) !important;
+}
+.modal-contenido .extra{
+    background:rgba(255,255,255,.74);
+    border-color:#c8eaf4 !important;
+}
+
+
+/* ===== HORARIOS EDITABLES DIRECTAMENTE ===== */
+.horarios-rapidos{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.boton-horario.horario-editable{
+    display:flex;align-items:center;justify-content:center;gap:7px;
+    padding:9px 10px;min-height:48px;
+}
+.horario-casilla{
+    width:105px!important;max-width:100%;padding:6px 7px!important;
+    margin:0!important;border:0!important;border-radius:7px!important;
+    background:transparent!important;box-shadow:none!important;
+    color:#111;font-size:18px!important;font-weight:900;cursor:pointer;
+}
+.boton-horario.seleccionado .horario-casilla{color:#fff}
+.boton-horario.horario-editable:has(.horario-casilla:focus){
+    border-color:#5a189a;
+}
+@media(max-width:650px){
+    .horarios-rapidos{grid-template-columns:1fr}
+    .horario-casilla{width:125px!important}
+}
+
 </style>
 </head>
 
@@ -222,17 +298,20 @@ header{
 </div>
 
 <div class="grupo">
-<label>🕐 Horario del evento <span style="font-size:12px;font-weight:normal;color:#666">(13:00, 17:00 y 21:00 son horarios rápidos opcionales)</span></label>
+<label>🕐 Horario del evento <span style="font-size:12px;font-weight:normal;color:#666">(Cada casilla se puede modificar. Elegí o escribí el horario que quieras.)</span></label>
 <div class="horarios-rapidos">
-    <button type="button" id="horario13" class="boton-horario" onclick="seleccionarHorario('13:00')">🕐 13:00</button>
-    <button type="button" id="horario17" class="boton-horario" onclick="seleccionarHorario('17:00')">🕔 17:00</button>
-    <button type="button" id="horario21" class="boton-horario" onclick="seleccionarHorario('21:00')">🕘 21:00</button>
+    <div id="horario13" class="boton-horario horario-editable" onclick="seleccionarHorarioCasilla(0)">
+        <span>🕐</span><input id="horaCasilla0" class="horario-casilla" type="time" value="13:00" onclick="event.stopPropagation()" onchange="cambiarHorarioCasilla(0)">
+    </div>
+    <div id="horario17" class="boton-horario horario-editable" onclick="seleccionarHorarioCasilla(1)">
+        <span>🕐</span><input id="horaCasilla1" class="horario-casilla" type="time" value="17:00" onclick="event.stopPropagation()" onchange="cambiarHorarioCasilla(1)">
+    </div>
+    <div id="horario21" class="boton-horario horario-editable" onclick="seleccionarHorarioCasilla(2)">
+        <span>🕐</span><input id="horaCasilla2" class="horario-casilla" type="time" value="21:00" onclick="event.stopPropagation()" onchange="cambiarHorarioCasilla(2)">
+    </div>
 </div>
-</div>
-
-<div class="grupo">
-<label>🕐 Horario personalizado</label>
-<input id="hora" type="time" onchange="actualizarBotonesHorario();actualizarDisponibilidad();">
+<!-- Campo interno: conserva una única hora real para guardar el evento. -->
+<input id="hora" type="time" style="display:none">
 </div>
 
 <div class="grupo">
@@ -307,11 +386,16 @@ header{
     <label class="extra"><input id="extraSillas" type="checkbox" onchange="actualizarPrecioPorExtras()">🪑 Sillas <span class="precio-extra">+$2.000 c/u</span>
         <input id="cantidadSillas" class="cantidad-extra" type="number" min="1" max="100" value="1" disabled onchange="actualizarPrecioPorExtras()" onclick="event.stopPropagation()">
     </label>
-    <label class="extra"><input id="extraMozo" type="checkbox" onchange="actualizarPrecioPorExtras()">🍽️ Mozo extra <span class="precio-extra">+$20.000</span></label>
+    <label class="extra"><input id="extraMozo" type="checkbox" onchange="actualizarPrecioPorExtras()">🍽️ Mozos <span class="precio-extra">+$20.000 c/u</span>
+        <select id="cantidadMozo" class="cantidad-extra" disabled onchange="actualizarPrecioPorExtras()" onclick="event.stopPropagation()">
+            <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+        </select>
+    </label>
     <label class="extra"><input id="extraHoraAdicional" type="checkbox" onchange="actualizarPrecioPorExtras()">⏱️ Hora adicional <span class="precio-extra">+$40.000</span></label>
     <label class="extra"><input id="extraLicuados" type="checkbox" onchange="actualizarPrecioPorExtras()">🥤 Licuados — 30 personas <span class="precio-extra">+$25.000</span></label>
     <label class="extra"><input id="extraChocolate" type="checkbox" onchange="actualizarPrecioPorExtras()">🍫 Cascada de chocolate — 30 personas <span class="precio-extra">+$45.000</span></label>
     <label class="extra"><input id="extraCafeteria" type="checkbox" onchange="actualizarPrecioPorExtras()">☕ Cafetería <span class="precio-extra">+$20.000</span></label>
+    <label class="extra"><input id="extraInvitacion" type="checkbox" onchange="actualizarPrecioPorExtras()">💌 Invitación digital <span class="precio-extra">+$3.000</span></label>
 
     <label class="extra"><input id="extraSandwiches" type="checkbox" onchange="actualizarPrecioPorExtras()">🥪 Sándwiches de miga — 100 unidades <span class="precio-extra">+$38.000</span></label>
     <label class="extra"><input id="extraPanchos" type="checkbox" onchange="actualizarPrecioPorExtras()">🌭 Panchos / hot dogs — 24 unidades <span class="precio-extra">+$25.000</span></label>
@@ -329,12 +413,6 @@ header{
     </label>
 </div>
 </div>
-</div>
-
-<div class="grupo">
-<label>👨‍💼 Empleados que trabajarán</label>
-<div id="listaEmpleados" class="lista-empleados"></div>
-<button type="button" class="boton boton-morado" onclick="agregarEmpleado()">➕ Agregar empleado</button>
 </div>
 
 <div class="grupo">
@@ -793,6 +871,7 @@ function abrirNuevoEvento(fecha="",salon="Shalom",hora=""){
     document.getElementById("fecha").value=fecha;
     document.getElementById("salon").value=salon;
     document.getElementById("hora").value=hora;
+    establecerCasillasHorario(hora);
     document.getElementById("duracion").value="3";
     document.getElementById("telefono").value="";
     document.getElementById("nombre").value="";
@@ -818,6 +897,7 @@ function editarEvento(id){
     document.getElementById("fecha").value=evento.fecha;
     document.getElementById("salon").value=evento.salon;
     document.getElementById("hora").value=evento.hora;
+    establecerCasillasHorario(evento.hora);
     document.getElementById("duracion").value=evento.duracion||3;
     document.getElementById("telefono").value=evento.telefono||"";
     document.getElementById("nombre").value=evento.nombre||"";
@@ -840,10 +920,12 @@ function editarEvento(id){
     document.getElementById("extraMesas").checked=!!extras.mesas;
     document.getElementById("cantidadMesas").value=cantidadGuardada(extras.mesas)||1;
     document.getElementById("extraMozo").checked=!!extras.mozo;
+    document.getElementById("cantidadMozo").value=cantidadGuardada(extras.mozo)||1;
     document.getElementById("extraHoraAdicional").checked=!!extras.horaAdicional;
     document.getElementById("extraLicuados").checked=!!extras.licuados;
     document.getElementById("extraChocolate").checked=!!extras.cascadaChocolate;
     document.getElementById("extraCafeteria").checked=!!extras.cafeteria;
+    document.getElementById("extraInvitacion").checked=!!extras.invitacion;
     document.getElementById("extraSandwiches").checked=!!extras.sandwiches;
     document.getElementById("extraPanchos").checked=!!extras.panchos;
     document.getElementById("extraHelados").checked=!!extras.helados;
@@ -885,6 +967,7 @@ const PRECIOS_EXTRAS={
     licuados:25000,
     cascadaChocolate:45000,
     cafeteria:20000,
+    invitacion:3000,
     sandwiches:38000,
     panchos:25000,
     helados:36000,
@@ -945,11 +1028,13 @@ function totalExtrasConPrecio(){
     if(marcado("extra360"))total+=PRECIOS_EXTRAS.plataforma360;
     if(marcado("extraMesas"))total+=cantidadExtra("cantidadMesas")*PRECIOS_EXTRAS.mesasUnidad;
     if(marcado("extraSillas"))total+=cantidadExtra("cantidadSillas")*PRECIOS_EXTRAS.sillasUnidad;
-    if(marcado("extraMozo"))total+=PRECIOS_EXTRAS.mozo;
+    if(marcado("extraMozo"))total+=cantidadExtra("cantidadMozo")*PRECIOS_EXTRAS.mozo;
     if(marcado("extraHoraAdicional"))total+=PRECIOS_EXTRAS.horaAdicional;
     if(marcado("extraLicuados"))total+=PRECIOS_EXTRAS.licuados;
     if(marcado("extraChocolate"))total+=PRECIOS_EXTRAS.cascadaChocolate;
     if(marcado("extraCafeteria"))total+=PRECIOS_EXTRAS.cafeteria;
+    if(marcado("extraInvitacion"))extras.push(`💌 Invitación digital +${dinero(PRECIOS_EXTRAS.invitacion)}`);
+    if(marcado("extraInvitacion"))total+=PRECIOS_EXTRAS.invitacion;
     if(marcado("extraSandwiches"))total+=PRECIOS_EXTRAS.sandwiches;
     if(marcado("extraPanchos"))total+=PRECIOS_EXTRAS.panchos;
     if(marcado("extraHelados"))total+=PRECIOS_EXTRAS.helados;
@@ -969,7 +1054,8 @@ function actualizarControlesCantidad(){
         ["extraMesas","cantidadMesas"],
         ["extraSillas","cantidadSillas"],
         ["extraPataMuslo","cantidadPataMuslo"],
-        ["extraJugo","cantidadJugo"]
+        ["extraJugo","cantidadJugo"],
+        ["extraMozo","cantidadMozo"]
     ];
     pares.forEach(([checkId,inputId])=>{
         const check=document.getElementById(checkId);
@@ -1008,7 +1094,7 @@ function actualizarDesglosePrecio(){
     if(marcado("extra360"))extras.push(`📸 Plataforma 360 +${dinero(PRECIOS_EXTRAS.plataforma360)}`);
     if(marcado("extraMesas"))extras.push(`🪑 Mesas x${cantidadExtra("cantidadMesas")} +${dinero(cantidadExtra("cantidadMesas")*PRECIOS_EXTRAS.mesasUnidad)}`);
     if(marcado("extraSillas"))extras.push(`🪑 Sillas x${cantidadExtra("cantidadSillas")} +${dinero(cantidadExtra("cantidadSillas")*PRECIOS_EXTRAS.sillasUnidad)}`);
-    if(marcado("extraMozo"))extras.push(`🍽️ Mozo +${dinero(PRECIOS_EXTRAS.mozo)}`);
+    if(marcado("extraMozo"))extras.push(`🍽️ Mozos x${cantidadExtra("cantidadMozo")} +${dinero(cantidadExtra("cantidadMozo")*PRECIOS_EXTRAS.mozo)}`);
     if(marcado("extraHoraAdicional"))extras.push(`⏱️ Hora adicional +${dinero(PRECIOS_EXTRAS.horaAdicional)}`);
     if(marcado("extraLicuados"))extras.push(`🥤 Licuados (30 personas) +${dinero(PRECIOS_EXTRAS.licuados)}`);
     if(marcado("extraChocolate"))extras.push(`🍫 Cascada (30 personas) +${dinero(PRECIOS_EXTRAS.cascadaChocolate)}`);
@@ -1039,11 +1125,12 @@ function calcularPrecioBaseAlEditar(evento){
     if(extras.plataforma360)cargos+=PRECIOS_EXTRAS.plataforma360;
     if(extras.mesas)cargos+=cantidadGuardada(extras.mesas)*PRECIOS_EXTRAS.mesasUnidad;
     if(extras.sillas)cargos+=cantidadGuardada(extras.sillas)*PRECIOS_EXTRAS.sillasUnidad;
-    if(extras.mozo)cargos+=PRECIOS_EXTRAS.mozo;
+    if(extras.mozo)cargos+=cantidadGuardada(extras.mozo)*PRECIOS_EXTRAS.mozo;
     if(extras.horaAdicional)cargos+=PRECIOS_EXTRAS.horaAdicional;
     if(extras.licuados)cargos+=PRECIOS_EXTRAS.licuados;
     if(extras.cascadaChocolate)cargos+=PRECIOS_EXTRAS.cascadaChocolate;
     if(extras.cafeteria)cargos+=PRECIOS_EXTRAS.cafeteria;
+    if(extras.invitacion)cargos+=PRECIOS_EXTRAS.invitacion;
     if(extras.sandwiches)cargos+=PRECIOS_EXTRAS.sandwiches;
     if(extras.panchos)cargos+=PRECIOS_EXTRAS.panchos;
     if(extras.helados)cargos+=PRECIOS_EXTRAS.helados;
@@ -1081,17 +1168,64 @@ function limpiarExtras(){
 /* ============================================================
    HORARIOS / DISPONIBILIDAD
 ============================================================ */
+
 function seleccionarHorario(hora){
-    document.getElementById("hora").value=hora;
-    actualizarBotonesHorario();
+    const horas=obtenerHorasCasillas();
+    let i=horas.indexOf(hora);
+    if(i<0){
+        i=0;
+        document.getElementById("horaCasilla"+i).value=hora;
+    }
+    seleccionarHorarioCasilla(i);
+}
+
+function obtenerHorasCasillas(){
+    return [0,1,2].map(i=>document.getElementById("horaCasilla"+i).value||"");
+}
+function seleccionarHorarioCasilla(indice){
+    const input=document.getElementById("horaCasilla"+indice);
+    if(!input || !input.value)return;
+    document.getElementById("hora").value=input.value;
+    actualizarBotonesHorario(indice);
     actualizarDisponibilidad();
 }
-function actualizarBotonesHorario(){
+function cambiarHorarioCasilla(indice){
+    const input=document.getElementById("horaCasilla"+indice);
+    if(!input || !input.value)return;
+    // Al modificar una casilla, esa pasa a ser automáticamente la hora elegida.
+    document.getElementById("hora").value=input.value;
+    actualizarBotonesHorario(indice);
+    actualizarDisponibilidad();
+}
+function establecerCasillasHorario(horaEvento=""){
+    const base=["13:00","17:00","21:00"];
+    // Si la reserva tiene una hora personalizada, la colocamos en la casilla
+    // más cercana. Así, por ejemplo, 16:00 ocupa visualmente la casilla de 17:00.
+    if(horaEvento && !base.includes(horaEvento)){
+        let objetivo=1;
+        const minutos=h=>{const [hh,mm]=h.split(":").map(Number);return hh*60+mm;};
+        const m=minutos(horaEvento);
+        const dist=base.map(h=>Math.abs(minutos(h)-m));
+        objetivo=dist.indexOf(Math.min(...dist));
+        base[objetivo]=horaEvento;
+    }
+    base.forEach((h,i)=>{
+        const input=document.getElementById("horaCasilla"+i);
+        if(input)input.value=h;
+    });
+    actualizarBotonesHorario();
+}
+function actualizarBotonesHorario(indiceForzado=null){
     document.querySelectorAll(".boton-horario").forEach(b=>b.classList.remove("seleccionado"));
     const hora=document.getElementById("hora").value;
-    if(hora==="13:00")document.getElementById("horario13").classList.add("seleccionado");
-    if(hora==="17:00")document.getElementById("horario17").classList.add("seleccionado");
-    if(hora==="21:00")document.getElementById("horario21").classList.add("seleccionado");
+    let indice=indiceForzado;
+    if(indice===null){
+        indice=obtenerHorasCasillas().indexOf(hora);
+    }
+    if(indice>=0){
+        const casilla=document.getElementById("horario"+[13,17,21][indice]);
+        if(casilla)casilla.classList.add("seleccionado");
+    }
 }
 function actualizarDisponibilidad(){
     const fecha=document.getElementById("fecha").value;
@@ -1236,11 +1370,12 @@ async function guardarEvento(){
             plataforma360:document.getElementById("extra360").checked,
             sillas:document.getElementById("extraSillas").checked ? cantidadExtra("cantidadSillas") : 0,
             mesas:document.getElementById("extraMesas").checked ? cantidadExtra("cantidadMesas") : 0,
-            mozo:document.getElementById("extraMozo").checked,
+            mozo:document.getElementById("extraMozo").checked ? cantidadExtra("cantidadMozo") : 0,
             horaAdicional:document.getElementById("extraHoraAdicional").checked,
             licuados:document.getElementById("extraLicuados").checked,
             cascadaChocolate:document.getElementById("extraChocolate").checked,
             cafeteria:document.getElementById("extraCafeteria").checked,
+            invitacion:document.getElementById("extraInvitacion").checked,
             sandwiches:document.getElementById("extraSandwiches").checked,
             panchos:document.getElementById("extraPanchos").checked,
             helados:document.getElementById("extraHelados").checked,
@@ -1354,7 +1489,7 @@ function listaExtrasEvento(evento){
     if(extras.plataforma360)lista.push("📸 Plataforma 360");
     if(extras.sillas)lista.push(`🪑 Sillas x${cantidadGuardada(extras.sillas)}`);
     if(extras.mesas)lista.push(`🪑 Mesas x${cantidadGuardada(extras.mesas)}`);
-    if(extras.mozo)lista.push("🍽️ Mozo extra");
+    if(extras.mozo)lista.push(`🍽️ Mozos x${cantidadGuardada(extras.mozo)}`);
     if(extras.horaAdicional)lista.push("⏱️ Hora adicional");
     if(extras.maquillaje)lista.push(extras.maquillajeRegalo ? "🎨 Maquillaje 🎁 REGALO" : "🎨 Maquillaje 💰");
     if(extras.pochoclos)lista.push(extras.pochoclosRegalo ? "🍿 Pochoclos — 20 niños 🎁 REGALO" : "🍿 Pochoclos — 20 niños 💰");
@@ -1362,6 +1497,7 @@ function listaExtrasEvento(evento){
     if(extras.licuados)lista.push("🥤 Licuados — 30 personas");
     if(extras.cascadaChocolate)lista.push("🍫 Cascada — 30 personas");
     if(extras.cafeteria)lista.push("☕ Cafetería");
+    if(extras.invitacion)lista.push("💌 INVITACIÓN — HACER");
     if(extras.sandwiches)lista.push("🥪 Sándwiches — 100 unidades");
     if(extras.panchos)lista.push("🌭 Panchos — 24 unidades");
     if(extras.helados)lista.push("🍨 Helados — 30 copas");
