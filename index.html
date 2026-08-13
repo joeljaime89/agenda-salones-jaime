@@ -87,6 +87,17 @@ header{
 .horarios-rapidos{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
 .boton-horario{background:#eee;border:2px solid #ccc;padding:12px;border-radius:8px;cursor:pointer;font-weight:900}
 .boton-horario.seleccionado{background:#7b2cbf;border-color:#5a189a;color:#fff}
+.horario-editable{
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    background:#eee;border:2px solid #ccc;padding:8px;border-radius:8px;
+    font-weight:900;cursor:pointer
+}
+.horario-editable.seleccionado{background:#7b2cbf;border-color:#5a189a;color:#fff}
+.horario-editable input{
+    width:105px;border:0;background:transparent;color:inherit;
+    font:inherit;text-align:center;cursor:pointer;outline:none
+}
+.horario-editable input::-webkit-calendar-picker-indicator{cursor:pointer}
 .disponibilidad{padding:12px;border-radius:10px;background:#f3f3f3;margin-bottom:14px}
 .disponibilidad-linea{padding:4px 0;font-weight:900}.libre{color:#198754}.ocupado{color:#dc3545}
 .extras{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}.extra{background:#f2f2f2;border-radius:8px;padding:10px;cursor:pointer}.extra:hover{background:#e7d7f7}
@@ -182,11 +193,20 @@ header{
 </div>
 
 <div class="grupo">
-<label>🕐 Horario del evento</label>
+<label>🕐 Horarios rápidos (podés editar los 3) <span style="font-size:12px;font-weight:normal;color:#666">— el evento ocupa la casilla más cercana a su horario real</span></label>
 <div class="horarios-rapidos">
-    <button type="button" id="horario13" class="boton-horario" onclick="seleccionarHorario('13:00')">🕐 13:00</button>
-    <button type="button" id="horario17" class="boton-horario" onclick="seleccionarHorario('17:00')">🕔 17:00</button>
-    <button type="button" id="horario21" class="boton-horario" onclick="seleccionarHorario('21:00')">🕘 21:00</button>
+    <label class="horario-editable" id="contenedorHorario0">
+        🕐 <input id="horario0" type="time" value="13:00" title="Editar horario rápido 1"
+            onchange="cambiarHorarioRapido(0,this.value)" onclick="seleccionarHorarioRapido(0)">
+    </label>
+    <label class="horario-editable" id="contenedorHorario1">
+        🕐 <input id="horario1" type="time" value="17:00" title="Editar horario rápido 2"
+            onchange="cambiarHorarioRapido(1,this.value)" onclick="seleccionarHorarioRapido(1)">
+    </label>
+    <label class="horario-editable" id="contenedorHorario2">
+        🕐 <input id="horario2" type="time" value="21:00" title="Editar horario rápido 3"
+            onchange="cambiarHorarioRapido(2,this.value)" onclick="seleccionarHorarioRapido(2)">
+    </label>
 </div>
 </div>
 
@@ -292,7 +312,56 @@ const supabaseClient = window.supabase.createClient(
     }
 );
 
-const HORARIOS=["13:00","17:00","21:00"];
+let HORARIOS=cargarHorariosRapidos();
+
+function cargarHorariosRapidos(){
+    try{
+        const guardados=JSON.parse(localStorage.getItem("agendaHorariosRapidos")||"null");
+        if(Array.isArray(guardados) && guardados.length===3 && guardados.every(h=>/^([01]\\d|2[0-3]):[0-5]\\d$/.test(h))){
+            return guardados;
+        }
+    }catch(e){}
+    return ["13:00","17:00","21:00"];
+}
+
+function guardarHorariosRapidos(){
+    try{localStorage.setItem("agendaHorariosRapidos",JSON.stringify(HORARIOS));}catch(e){}
+}
+
+function renderizarHorariosRapidos(){
+    HORARIOS.forEach((hora,i)=>{
+        const input=document.getElementById("horario"+i);
+        if(input)input.value=hora;
+    });
+    actualizarBotonesHorario();
+}
+
+function seleccionarHorarioRapido(indice){
+    const hora=HORARIOS[indice];
+    if(hora)seleccionarHorario(hora);
+}
+
+function cambiarHorarioRapido(indice,hora){
+    if(!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(hora))return;
+
+    const anteriores=[...HORARIOS];
+    HORARIOS[indice]=hora;
+
+    // Evita que dos casillas terminen con el mismo horario.
+    if(new Set(HORARIOS).size<3){
+        HORARIOS=anteriores;
+        renderizarHorariosRapidos();
+        alert("Los tres horarios rápidos deben ser diferentes.");
+        return;
+    }
+
+    HORARIOS.sort((a,b)=>horaEnMinutos(a)-horaEnMinutos(b));
+    guardarHorariosRapidos();
+    renderizarHorariosRapidos();
+    generarCalendario();
+    actualizarDisponibilidad();
+}
+
 const SALONES=[
     {nombre:"Shalom",emoji:"🟡",clase:"shalom",logo:"IMG/logoP.png"},
     {nombre:"Mundo Mágico",emoji:"🔴",clase:"mundo",logo:"IMG/logo1.png"},
@@ -565,14 +634,88 @@ function crearBloqueSalon(fecha,salon){
     lista.className="lista-horarios";
 
     HORARIOS.forEach(hora=>crearTurno(lista,fecha,hora,salon));
-    eventosSalon.filter(e=>!HORARIOS.includes(e.hora)).forEach(e=>crearEventoVisual(lista,e,salon));
+    eventosSalon.filter(e=>!HORARIOS.some(h=>eventoParaHorario(e,h))).forEach(e=>crearEventoVisual(lista,e,salon));
 
     bloque.appendChild(lista);
     return bloque;
 }
 
+function horaEnMinutos(hora){
+    if(!hora || !String(hora).includes(":"))return null;
+    const partes=String(hora).split(":");
+    const h=Number(partes[0]),m=Number(partes[1]);
+    if(!Number.isFinite(h)||!Number.isFinite(m))return null;
+    return h*60+m;
+}
+
+function eventoParaHorario(evento,horaBase){
+    if(!evento || evento.fecha===undefined)return false;
+
+    const inicioEvento=horaEnMinutos(evento.hora);
+    const base=horaEnMinutos(horaBase);
+    if(inicioEvento===null || base===null)return false;
+
+    /*
+        Los tres horarios rápidos son CASILLAS/ESPACIOS visuales.
+
+        El evento se coloca en la casilla cuyo horario está MÁS CERCA
+        del horario real del evento.
+
+        Ejemplo con 13:00 / 17:00 / 21:00:
+
+          13:00 -> casilla 13
+          13:30 -> casilla 13
+          14:30 -> casilla 13
+          15:00 -> casilla 17
+          16:00 -> casilla 17   <-- caso que necesitás
+          17:00 -> casilla 17
+          18:30 -> casilla 17
+          19:00 -> casilla 21
+          20:30 -> casilla 21
+          21:00 -> casilla 21
+
+        Si cambiás las casillas, por ejemplo a:
+          12:00 / 16:00 / 20:00
+
+        automáticamente se usan esos nuevos horarios como referencia.
+
+        IMPORTANTE:
+        El horario REAL del evento nunca se modifica.
+        Si la reserva es a las 16:00, la tarjeta muestra "16:00",
+        pero ocupa visualmente la casilla de referencia de 17:00.
+    */
+
+    const horarios=[...HORARIOS]
+        .map((h,i)=>({hora:h,min:horaEnMinutos(h),indice:i}))
+        .filter(x=>x.min!==null)
+        .sort((a,b)=>a.min-b.min);
+
+    if(!horarios.length)return false;
+
+    // Encontramos el horario rápido más cercano al horario real.
+    let masCercano=horarios[0];
+    let menorDistancia=Math.abs(inicioEvento-masCercano.min);
+
+    for(let i=1;i<horarios.length;i++){
+        const distancia=Math.abs(inicioEvento-horarios[i].min);
+
+        // En caso de empate elegimos el horario posterior.
+        if(distancia<menorDistancia || (distancia===menorDistancia && horarios[i].min>masCercano.min)){
+            masCercano=horarios[i];
+            menorDistancia=distancia;
+        }
+    }
+
+    return masCercano.min===base;
+}
+
 function crearTurno(contenedor,fecha,hora,salon){
-    const evento=eventos.find(e=>e.fecha===fecha && e.hora===hora && e.salon===salon.nombre);
+    const evento=eventos.find(e=>
+        e.fecha===fecha &&
+        e.salon===salon.nombre &&
+        eventoParaHorario(e,hora)
+    );
+
     const turno=document.createElement("div");
     turno.className=evento?"turno turno-ocupado":"turno turno-libre";
 
@@ -587,6 +730,11 @@ function crearTurno(contenedor,fecha,hora,salon){
     turno.appendChild(estado);
 
     if(evento){
+        const horaReal=document.createElement("div");
+        horaReal.style.fontWeight="900";
+        horaReal.textContent="⏰ "+evento.hora;
+        turno.appendChild(horaReal);
+
         const telefono=document.createElement("div");
         telefono.textContent="📞 "+(evento.telefono||"Sin teléfono");
         turno.appendChild(telefono);
@@ -600,6 +748,7 @@ function crearTurno(contenedor,fecha,hora,salon){
     }else{
         turno.onclick=e=>{e.stopPropagation();abrirNuevoEvento(fecha,salon.nombre,hora)};
     }
+
     contenedor.appendChild(turno);
 }
 
@@ -734,7 +883,12 @@ function actualizarDisponibilidad(){
     }).join("");
 }
 function estaOcupado(fecha,hora,salon){
-    return eventos.some(e=>e.fecha===fecha&&e.hora===hora&&e.salon===salon&&!mismoId(e.id,eventoEditando));
+    return eventos.some(e=>
+        e.fecha===fecha &&
+        e.salon===salon &&
+        eventoParaHorario(e,hora) &&
+        !mismoId(e.id,eventoEditando)
+    );
 }
 
 /* ============================================================
@@ -978,6 +1132,7 @@ document.addEventListener("keydown",function(event){
    INICIO
 ============================================================ */
 (async function iniciar(){
+    renderizarHorariosRapidos();
     eventos=cargarCopiaLocal();
     generarCalendario();
     await cargarEventosDesdeNube();
