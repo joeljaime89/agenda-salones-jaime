@@ -232,12 +232,14 @@ header{
 .calendario .turno{
     pointer-events:auto!important;
     cursor:pointer!important;
+    position:relative;
+    z-index:50!important;
 }
 .calendario .turno *{
-    pointer-events:none;
+    pointer-events:none!important;
 }
-
 </style>
+<link rel="icon" href="data:,">
 </head>
 
 <body>
@@ -461,8 +463,8 @@ const supabaseClient = window.supabase.createClient(
 
 const HORARIOS=["13:00","17:00","21:00"];
 const SALONES=[
-    {nombre:"Shalom",emoji:"🟡",clase:"shalom",logo:"IMG/logoP.png"},
-    {nombre:"Mundo Mágico",emoji:"🔴",clase:"mundo",logo:"IMG/logo1.png"},
+    {nombre:"Shalom",emoji:"🟡",clase:"shalom",logo:""},
+    {nombre:"Mundo Mágico",emoji:"🔴",clase:"mundo",logo:""},
     {nombre:"Dios es Real",emoji:"🟢",clase:"dios",logo:""},
     {nombre:"Salón",emoji:"⚪",clase:"cuarto",logo:""}
 ];
@@ -815,31 +817,8 @@ function crearTurno(contenedor,fecha,hora,salon){
         turno.appendChild(deuda);
 
         turno.title="Editar reserva";
-        const editarReserva=function(e){
-            if(e){e.preventDefault();e.stopPropagation();}
-            editarEvento(evento.id);
-        };
-        turno.onclick=editarReserva;
-        turno.addEventListener("click",editarReserva,false);
-        turno.addEventListener("pointerup",function(e){
-            if(e.button !== undefined && e.button !== 0)return;
-            editarReserva(e);
-        },false);
     }else{
         turno.title=`Reservar ${salon.nombre} — ${fechaTexto(fecha)} — ${hora}`;
-        const abrirReserva=function(e){
-            if(e){e.preventDefault();e.stopPropagation();}
-            abrirNuevoEvento(fecha,salon.nombre,hora);
-        };
-        turno.onclick=abrirReserva;
-        turno.addEventListener("click",abrirReserva,false);
-        turno.addEventListener("pointerup",function(e){
-            if(e.button !== undefined && e.button !== 0)return;
-            abrirReserva(e);
-        },false);
-        turno.addEventListener("keydown",function(e){
-            if(e.key==="Enter" || e.key===" "){abrirReserva(e);}
-        });
     }
 
     contenedor.appendChild(turno);
@@ -1616,21 +1595,41 @@ function actualizarAlertas(){
 }
 
 /* ============================================================
-   CLICS DEL CALENDARIO — CONTROL DE SEGURIDAD
-   Permite abrir tanto reservas libres como reservas ocupadas.
-   Se usa delegación además del onclick directo para evitar que
-   una regeneración del calendario deje casillas sin responder.
+   CLICS DEL CALENDARIO — SISTEMA ROBUSTO
+   Usa pointerdown + elementsFromPoint para que las casillas sigan
+   funcionando incluso si algún elemento transparente se superpone.
 ============================================================ */
-(function activarClicsCalendario(){
-    const calendario=document.getElementById("calendario");
-    if(!calendario)return;
+(function activarClicsCalendarioRobustos(){
+    let ultimoTurno=null;
+    let ultimoMomento=0;
 
-    calendario.addEventListener("click",function(e){
-        const turno=e.target.closest ? e.target.closest(".turno") : null;
-        if(!turno || !calendario.contains(turno))return;
+    function buscarTurnoEnPunto(e){
+        if(!e || typeof e.clientX!=="number" || typeof e.clientY!=="number") return null;
 
-        e.preventDefault();
-        e.stopPropagation();
+        const lista=document.elementsFromPoint(e.clientX,e.clientY);
+        for(const elemento of lista){
+            if(elemento && elemento.closest){
+                const turno=elemento.closest(".turno");
+                if(turno) return turno;
+            }
+        }
+
+        return e.target && e.target.closest ? e.target.closest(".turno") : null;
+    }
+
+    function abrirTurno(turno,e){
+        if(!turno) return false;
+
+        const ahora=Date.now();
+        if(turno===ultimoTurno && ahora-ultimoMomento<450) return true;
+
+        ultimoTurno=turno;
+        ultimoMomento=ahora;
+
+        if(e){
+            e.preventDefault();
+            e.stopPropagation();
+        }
 
         const id=turno.dataset.eventoId;
         if(id){
@@ -1642,17 +1641,24 @@ function actualizarAlertas(){
                 turno.dataset.horaBase || ""
             );
         }
-    }, true);
+        return true;
+    }
 
-    calendario.addEventListener("keydown",function(e){
-        if(e.key!=="Enter" && e.key!==" ")return;
-        const turno=e.target.closest ? e.target.closest(".turno") : null;
-        if(!turno)return;
-        e.preventDefault();
-        const id=turno.dataset.eventoId;
-        if(id) editarEvento(id);
-        else abrirNuevoEvento(turno.dataset.fecha||"",turno.dataset.salon||"Shalom",turno.dataset.horaBase||"");
-    });
+    document.addEventListener("pointerdown",function(e){
+        const turno=buscarTurnoEnPunto(e);
+        if(turno) abrirTurno(turno,e);
+    },true);
+
+    document.addEventListener("click",function(e){
+        const turno=buscarTurnoEnPunto(e);
+        if(turno) abrirTurno(turno,e);
+    },true);
+
+    document.addEventListener("keydown",function(e){
+        if(e.key!=="Enter" && e.key!==" ") return;
+        const turno=e.target && e.target.closest ? e.target.closest(".turno") : null;
+        if(turno) abrirTurno(turno,e);
+    },true);
 })();
 
 /* ============================================================
