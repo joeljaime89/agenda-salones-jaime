@@ -306,6 +306,7 @@ let fechaActual=new Date();
 let eventoEditando=null;
 let pagosActuales=[];
 let cargandoNube=false;
+let guardandoEvento=false;
 
 /* ============================================================
    UTILIDADES
@@ -370,13 +371,15 @@ async function cargarEventosDesdeNube(){
 
         eventos=(data||[]).map(fila=>{
             const datos=(fila.datos && typeof fila.datos==="object")?fila.datos:{};
-            return {
+            const evento={
                 ...datos,
                 id:fila.id,
                 fecha:fila.fecha,
                 salon:fila.salon,
                 hora:fila.hora
             };
+            asegurarClaveLocal(evento);
+            return evento;
         });
 
         guardarCopiaLocal();
@@ -404,7 +407,31 @@ async function recargarDesdeNube(){
    SUPABASE: GUARDAR / ACTUALIZAR
 ============================================================ */
 function esIdNumerico(valor){
-    return (typeof valor === "number" && Number.isInteger(valor)) || (typeof valor === "string" && /^\d+$/.test(valor));
+    if(valor===null || valor===undefined || valor==="")return false;
+    return /^\d+$/.test(String(valor));
+}
+
+function mismoId(a,b){
+    if(a===null || a===undefined || b===null || b===undefined)return false;
+    return String(a)===String(b);
+}
+
+function asegurarClaveLocal(evento){
+    if(!evento)return null;
+    if(!evento.localKey){
+        evento.localKey = "local-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,10);
+    }
+    return evento.localKey;
+}
+
+function encontrarEvento(evento){
+    if(!evento)return -1;
+    let indice=eventos.findIndex(e=>mismoId(e.id,evento.id));
+    if(indice>=0)return indice;
+    if(evento.localKey){
+        indice=eventos.findIndex(e=>e.localKey===evento.localKey);
+    }
+    return indice;
 }
 
 async function guardarEventoEnNube(evento){
@@ -462,7 +489,8 @@ async function guardarEventoEnNube(evento){
 }
 
 async function borrarEventoEnNube(id){
-    const {error}=await supabaseClient.from("eventos").delete().eq("id",id);
+    if(!esIdNumerico(id))throw new Error("ID de Supabase inválido para eliminar.");
+    const {error}=await supabaseClient.from("eventos").delete().eq("id",Number(id));
     if(error)throw error;
 }
 
@@ -636,7 +664,7 @@ function abrirNuevoEvento(fecha="",salon="Shalom",hora=""){
 }
 
 function editarEvento(id){
-    const evento=eventos.find(e=>e.id===id);
+    const evento=eventos.find(e=>mismoId(e.id,id));
     if(!evento)return;
 
     eventoEditando=id;
@@ -706,7 +734,7 @@ function actualizarDisponibilidad(){
     }).join("");
 }
 function estaOcupado(fecha,hora,salon){
-    return eventos.some(e=>e.fecha===fecha&&e.hora===hora&&e.salon===salon&&e.id!==eventoEditando);
+    return eventos.some(e=>e.fecha===fecha&&e.hora===hora&&e.salon===salon&&!mismoId(e.id,eventoEditando));
 }
 
 /* ============================================================
@@ -776,6 +804,15 @@ function actualizarResumenPago(){
    GUARDAR EVENTO
 ============================================================ */
 async function guardarEvento(){
+    if(guardandoEvento)return;
+    guardandoEvento=true;
+    const botonGuardar=document.getElementById("btnGuardar");
+    const textoOriginal=botonGuardar?.textContent;
+    if(botonGuardar){
+        botonGuardar.disabled=true;
+        botonGuardar.textContent="⏳ Guardando...";
+    }
+
     const fecha=document.getElementById("fecha").value;
     const salon=document.getElementById("salon").value;
     const hora=document.getElementById("hora").value;
@@ -788,8 +825,10 @@ async function guardarEvento(){
         return;
     }
 
+    const eventoAnterior = eventoEditando ? eventos.find(e=>mismoId(e.id,eventoEditando)) : null;
     const evento={
-        id:eventoEditando||crypto.randomUUID(),
+        id:eventoEditando || null,
+        localKey:eventoAnterior?.localKey || ("local-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,10)),
         fecha,salon,hora,
         duracion:Number(document.getElementById("duracion").value)||3,
         telefono:document.getElementById("telefono").value.trim(),
@@ -812,8 +851,9 @@ async function guardarEvento(){
         }
     };
 
-    const anterior=eventos.findIndex(e=>e.id===evento.id);
-    if(anterior>=0)eventos[anterior]=evento;else eventos.push(evento);
+    const anterior=encontrarEvento(evento);
+    if(anterior>=0)eventos[anterior]={...eventos[anterior],...evento};
+    else eventos.push(evento);
 
     guardarCopiaLocal();
     cerrarModal();
@@ -824,9 +864,9 @@ async function guardarEvento(){
         const idAnterior=evento.id;
         const idNube=await guardarEventoEnNube(evento);
 
-        if(idNube && idNube!==idAnterior){
+        if(idNube!==null && idNube!==undefined && !mismoId(idNube,idAnterior)){
             evento.id=idNube;
-            const indice=eventos.findIndex(e=>e.id===idAnterior);
+            const indice=encontrarEvento(evento);
             if(indice>=0)eventos[indice]=evento;
             generarCalendario();
         }
@@ -837,6 +877,12 @@ async function guardarEvento(){
         console.error("Error Supabase al guardar:",error);
         setEstadoNube("⚠️ Guardado local; falta sincronizar");
         alert("El evento quedó guardado en este dispositivo, pero Supabase no pudo guardarlo.\n\nError de Supabase: " + (error?.message || JSON.stringify(error)));
+    }finally{
+        guardandoEvento=false;
+        if(botonGuardar){
+            botonGuardar.disabled=false;
+            botonGuardar.textContent=textoOriginal||"💾 Guardar evento";
+        }
     }
 }
 
@@ -848,7 +894,7 @@ async function eliminarEvento(){
     if(!confirm("¿Seguro que querés eliminar este evento?"))return;
 
     const id=eventoEditando;
-    eventos=eventos.filter(e=>e.id!==id);
+    eventos=eventos.filter(e=>!mismoId(e.id,id));
     guardarCopiaLocal();
     cerrarModal();
     generarCalendario();
