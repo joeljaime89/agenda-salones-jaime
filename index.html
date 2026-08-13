@@ -125,7 +125,11 @@ header{
 .boton-horario.seleccionado{background:#7b2cbf;border-color:#5a189a;color:#fff}
 .disponibilidad{padding:12px;border-radius:10px;background:#f3f3f3;margin-bottom:14px}
 .disponibilidad-linea{padding:4px 0;font-weight:900}.libre{color:#198754}.ocupado{color:#dc3545}
-.extras{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}.extra{background:#f2f2f2;border-radius:8px;padding:10px;cursor:pointer}.extra:hover{background:#e7d7f7}
+.extras{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}
+.precio-extra{font-size:11px;font-weight:900;color:#6b3b8f;margin-left:3px}
+.cantidad-extra{width:58px!important;min-width:58px!important;padding:3px 4px!important;margin-left:4px;border:1px solid #b99ad0;border-radius:6px;background:#fff}
+.cantidad-extra:disabled{opacity:.45}
+.extra{background:#f2f2f2;border-radius:8px;padding:10px;cursor:pointer}.extra:hover{background:#e7d7f7}
 .extra input{width:auto;margin-right:5px}.lista-empleados{margin-bottom:7px}.empleado{display:flex;gap:6px;margin-bottom:6px}.empleado input{flex:1}
 .resumen-pagos{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:11px}
 .caja-pago{background:#f4f4f4;border-radius:10px;padding:11px;text-align:center}.caja-pago strong{display:block;font-size:18px;margin-top:4px}
@@ -253,7 +257,8 @@ header{
 
 <div class="grupo">
 <label>💰 Precio total del evento</label>
-<input id="precio" type="number" min="0" placeholder="Ej: 200000" oninput="actualizarResumenPago()">
+<input id="precio" type="number" min="0" placeholder="Ej: 200000" oninput="cambiarPrecioBaseDesdeCampo()">
+<div id="desglosePrecioExtras" style="margin-top:6px;font-size:12px;color:#6b3b8f;font-weight:700;">Sin extras con costo</div>
 </div>
 
 <div class="resumen-pagos">
@@ -275,17 +280,54 @@ header{
 <div class="grupo">
 <label>🎪 Agregados / Extras</label>
 <div class="extras">
-    <label class="extra"><input id="extraToro" type="checkbox">🐂 Toro mecánico</label>
-    <label class="extra"><input id="extraMaquillaje" type="checkbox">🎨 Maquillaje</label>
-    <label class="extra"><input id="extraPochoclos" type="checkbox">🍿 Pochoclos</label>
-    <label class="extra"><input id="extraAlgodon" type="checkbox">🍭 Algodón de azúcar</label>
-    <label class="extra"><input id="extra360" type="checkbox">📸 Plataforma 360</label>
-    <label class="extra"><input id="extraSillas" type="checkbox">🪑 Sillas</label>
-    <label class="extra"><input id="extraMesas" type="checkbox">🪑 Mesas</label>
-    <label class="extra"><input id="extraMozo" type="checkbox">🍽️ Mozo extra</label>
-    <label class="extra"><input id="extraHoraAdicional" type="checkbox">⏱️ Hora adicional</label>
-    <label class="extra"><input id="extraLicuados" type="checkbox">🥤 Licuados</label>
-    <label class="extra"><input id="extraChocolate" type="checkbox">🍫 Cascada de chocolate</label>
+    <label class="extra"><input id="extraToro" type="checkbox" onchange="actualizarPrecioPorExtras()">🐂 Toro mecánico <span class="precio-extra">+$40.000</span></label>
+    <label class="extra"><input id="extraMaquillaje" type="checkbox" onchange="actualizarPrecioPorExtras()">🎨 Maquillaje <span class="precio-extra">+$15.000</span>
+        <select id="estadoMaquillaje" class="estado-extra" disabled onchange="actualizarPrecioPorExtras()" onclick="event.stopPropagation()">
+            <option value="paga">💰 Lo paga</option><option value="regalo">🎁 Regalo</option>
+        </select>
+    </label>
+    <label class="extra"><input id="extraPochoclos" type="checkbox" onchange="actualizarPrecioPorExtras()">🍿 Pochoclos — 20 niños <span class="precio-extra">+$5.000</span>
+        <select id="estadoPochoclos" class="estado-extra" disabled onchange="actualizarPrecioPorExtras()" onclick="event.stopPropagation()">
+            <option value="paga">💰 Lo paga</option><option value="regalo">🎁 Regalo</option>
+        </select>
+    </label>
+    <label class="extra"><input id="extraAlgodon" type="checkbox" onchange="actualizarPrecioPorExtras()">🍭 Algodón de azúcar <span class="precio-extra">+$1.000 c/u</span>
+        <input id="cantidadAlgodon" class="cantidad-extra" type="number" min="1" max="100" value="1" disabled onchange="actualizarPrecioPorExtras()" onclick="event.stopPropagation()">
+        <select id="estadoAlgodon" class="estado-extra" disabled onchange="actualizarPrecioPorExtras()" onclick="event.stopPropagation()">
+            <option value="paga">💰 Lo paga</option><option value="regalo">🎁 Regalo</option>
+        </select>
+    </label>
+    <label class="extra"><input id="extra360" type="checkbox" onchange="actualizarPrecioPorExtras()">📸 Plataforma 360 <span class="precio-extra">+$20.000</span></label>
+    <label class="extra"><input id="extraMesas" type="checkbox" onchange="actualizarPrecioPorExtras()">🪑 Mesas <span class="precio-extra">+$5.000 c/u</span>
+        <select id="cantidadMesas" class="cantidad-extra" disabled onchange="actualizarPrecioPorExtras()" onclick="event.stopPropagation()">
+            <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+            <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+        </select>
+    </label>
+    <label class="extra"><input id="extraSillas" type="checkbox" onchange="actualizarPrecioPorExtras()">🪑 Sillas <span class="precio-extra">+$2.000 c/u</span>
+        <input id="cantidadSillas" class="cantidad-extra" type="number" min="1" max="100" value="1" disabled onchange="actualizarPrecioPorExtras()" onclick="event.stopPropagation()">
+    </label>
+    <label class="extra"><input id="extraMozo" type="checkbox" onchange="actualizarPrecioPorExtras()">🍽️ Mozo extra <span class="precio-extra">+$20.000</span></label>
+    <label class="extra"><input id="extraHoraAdicional" type="checkbox" onchange="actualizarPrecioPorExtras()">⏱️ Hora adicional <span class="precio-extra">+$40.000</span></label>
+    <label class="extra"><input id="extraLicuados" type="checkbox" onchange="actualizarPrecioPorExtras()">🥤 Licuados — 30 personas <span class="precio-extra">+$25.000</span></label>
+    <label class="extra"><input id="extraChocolate" type="checkbox" onchange="actualizarPrecioPorExtras()">🍫 Cascada de chocolate — 30 personas <span class="precio-extra">+$45.000</span></label>
+    <label class="extra"><input id="extraCafeteria" type="checkbox" onchange="actualizarPrecioPorExtras()">☕ Cafetería <span class="precio-extra">+$20.000</span></label>
+
+    <label class="extra"><input id="extraSandwiches" type="checkbox" onchange="actualizarPrecioPorExtras()">🥪 Sándwiches de miga — 100 unidades <span class="precio-extra">+$38.000</span></label>
+    <label class="extra"><input id="extraPanchos" type="checkbox" onchange="actualizarPrecioPorExtras()">🌭 Panchos / hot dogs — 24 unidades <span class="precio-extra">+$25.000</span></label>
+    <label class="extra"><input id="extraHelados" type="checkbox" onchange="actualizarPrecioPorExtras()">🍨 Helados — 30 copas <span class="precio-extra">+$36.000</span></label>
+    <label class="extra"><input id="extraChocolateTaza" type="checkbox" onchange="actualizarPrecioPorExtras()">☕ Chocolate en taza — 40 tazas <span class="precio-extra">+$35.000</span></label>
+    <label class="extra"><input id="extraPicetas" type="checkbox" onchange="actualizarPrecioPorExtras()">🍕 Picetas — 24 unidades <span class="precio-extra">+$22.000</span></label>
+    <label class="extra"><input id="extraGelatina" type="checkbox" onchange="actualizarPrecioPorExtras()">🍮 Gelatina en vasito — 12 personas <span class="precio-extra">+$5.000</span></label>
+    <label class="extra"><input id="extraFlan" type="checkbox" onchange="actualizarPrecioPorExtras()">🍮 Vasitos de flan — 12 unidades <span class="precio-extra">+$7.000</span></label>
+
+    <label class="extra"><input id="extraPataMuslo" type="checkbox" onchange="actualizarPrecioPorExtras()">🍗 Pata muslo con ensalada rusa <span class="precio-extra">+$12.000 c/u</span>
+        <input id="cantidadPataMuslo" class="cantidad-extra" type="number" min="1" max="100" value="1" disabled onchange="actualizarPrecioPorExtras()" onclick="event.stopPropagation()">
+    </label>
+    <label class="extra"><input id="extraJugo" type="checkbox" onchange="actualizarPrecioPorExtras()">🧃 Jugo natural — bidón 5 L <span class="precio-extra">+$6.000 c/u</span>
+        <input id="cantidadJugo" class="cantidad-extra" type="number" min="1" max="20" value="1" disabled onchange="actualizarPrecioPorExtras()" onclick="event.stopPropagation()">
+    </label>
+</div>
 </div>
 </div>
 
@@ -744,6 +786,7 @@ function crearEventoVisual(contenedor,evento,salon){
    MODAL NUEVO / EDITAR
 ============================================================ */
 function abrirNuevoEvento(fecha="",salon="Shalom",hora=""){
+    precioBaseEvento=0;
     eventoEditando=null;
     pagosActuales=[];
     document.getElementById("tituloModal").textContent="➕ Nuevo evento";
@@ -785,15 +828,37 @@ function editarEvento(id){
     const extras=evento.extras||{};
     document.getElementById("extraToro").checked=!!extras.toro;
     document.getElementById("extraMaquillaje").checked=!!extras.maquillaje;
+    document.getElementById("estadoMaquillaje").value=extras.maquillajeRegalo?"regalo":"paga";
     document.getElementById("extraPochoclos").checked=!!extras.pochoclos;
+    document.getElementById("estadoPochoclos").value=extras.pochoclosRegalo?"regalo":"paga";
     document.getElementById("extraAlgodon").checked=!!extras.algodon;
+    document.getElementById("estadoAlgodon").value=extras.algodonRegalo?"regalo":"paga";
+    document.getElementById("cantidadAlgodon").value=cantidadGuardada(extras.algodon)||1;
     document.getElementById("extra360").checked=!!extras.plataforma360;
     document.getElementById("extraSillas").checked=!!extras.sillas;
+    document.getElementById("cantidadSillas").value=cantidadGuardada(extras.sillas)||1;
     document.getElementById("extraMesas").checked=!!extras.mesas;
+    document.getElementById("cantidadMesas").value=cantidadGuardada(extras.mesas)||1;
     document.getElementById("extraMozo").checked=!!extras.mozo;
     document.getElementById("extraHoraAdicional").checked=!!extras.horaAdicional;
     document.getElementById("extraLicuados").checked=!!extras.licuados;
     document.getElementById("extraChocolate").checked=!!extras.cascadaChocolate;
+    document.getElementById("extraCafeteria").checked=!!extras.cafeteria;
+    document.getElementById("extraSandwiches").checked=!!extras.sandwiches;
+    document.getElementById("extraPanchos").checked=!!extras.panchos;
+    document.getElementById("extraHelados").checked=!!extras.helados;
+    document.getElementById("extraChocolateTaza").checked=!!extras.chocolateTaza;
+    document.getElementById("extraPicetas").checked=!!extras.picetas;
+    document.getElementById("extraGelatina").checked=!!extras.gelatina;
+    document.getElementById("extraFlan").checked=!!extras.flan;
+    document.getElementById("extraPataMuslo").checked=!!extras.pataMuslo;
+    document.getElementById("cantidadPataMuslo").value=cantidadGuardada(extras.pataMuslo)||1;
+    document.getElementById("extraJugo").checked=!!extras.jugo;
+    document.getElementById("cantidadJugo").value=cantidadGuardada(extras.jugo)||1;
+    precioBaseEvento=calcularPrecioBaseAlEditar(evento);
+    document.getElementById("precio").value=Number(evento.precio||0);
+    actualizarControlesCantidad();
+    actualizarPrecioPorExtras();
 
     document.getElementById("listaEmpleados").innerHTML="";
     (evento.empleados||[]).forEach(n=>agregarEmpleado(n));
@@ -806,8 +871,211 @@ function editarEvento(id){
     document.getElementById("modal").style.display="flex";
 }
 
+
+const PRECIOS_EXTRAS={
+    toro:40000,
+    maquillaje:15000,
+    pochoclos:5000,
+    algodonUnidad:1000,
+    plataforma360:20000,
+    mesasUnidad:5000,
+    sillasUnidad:2000,
+    mozo:20000,
+    horaAdicional:40000,
+    licuados:25000,
+    cascadaChocolate:45000,
+    cafeteria:20000,
+    sandwiches:38000,
+    panchos:25000,
+    helados:36000,
+    chocolateTaza:35000,
+    picetas:22000,
+    gelatina:5000,
+    flan:7000,
+    pataMusloPersona:12000,
+    jugoBidon:6000
+};
+
+let precioBaseEvento=0;
+
+function cantidadExtra(id){
+    const el=document.getElementById(id);
+    if(!el)return 0;
+    const n=Number(el.value);
+    return Number.isFinite(n) && n>0 ? Math.floor(n) : 1;
+}
+
+function cantidadGuardada(valor){
+    // Compatibilidad con reservas antiguas donde mesas/sillas/algodón eran booleanos.
+    if(valor===true)return 1;
+    const n=Number(valor);
+    return Number.isFinite(n) && n>0 ? Math.floor(n) : 0;
+}
+
+
+function extraEsRegalo(idEstado){
+    return document.getElementById(idEstado)?.value==="regalo";
+}
+
+function actualizarEstadosExtras(){
+    const pares=[
+        ["extraMaquillaje","estadoMaquillaje"],
+        ["extraPochoclos","estadoPochoclos"],
+        ["extraAlgodon","estadoAlgodon"]
+    ];
+
+    pares.forEach(([checkId,estadoId])=>{
+        const check=document.getElementById(checkId);
+        const estado=document.getElementById(estadoId);
+        if(!check||!estado)return;
+
+        estado.disabled=!check.checked;
+        if(!check.checked)estado.value="paga";
+    });
+}
+
+function totalExtrasConPrecio(){
+    let total=0;
+    const marcado=id=>!!document.getElementById(id)?.checked;
+
+    if(marcado("extraToro"))total+=PRECIOS_EXTRAS.toro;
+    if(marcado("extraMaquillaje") && !extraEsRegalo("estadoMaquillaje"))total+=PRECIOS_EXTRAS.maquillaje;
+    if(marcado("extraPochoclos") && !extraEsRegalo("estadoPochoclos"))total+=PRECIOS_EXTRAS.pochoclos;
+    if(marcado("extraAlgodon") && !extraEsRegalo("estadoAlgodon"))total+=cantidadExtra("cantidadAlgodon")*PRECIOS_EXTRAS.algodonUnidad;
+    if(marcado("extra360"))total+=PRECIOS_EXTRAS.plataforma360;
+    if(marcado("extraMesas"))total+=cantidadExtra("cantidadMesas")*PRECIOS_EXTRAS.mesasUnidad;
+    if(marcado("extraSillas"))total+=cantidadExtra("cantidadSillas")*PRECIOS_EXTRAS.sillasUnidad;
+    if(marcado("extraMozo"))total+=PRECIOS_EXTRAS.mozo;
+    if(marcado("extraHoraAdicional"))total+=PRECIOS_EXTRAS.horaAdicional;
+    if(marcado("extraLicuados"))total+=PRECIOS_EXTRAS.licuados;
+    if(marcado("extraChocolate"))total+=PRECIOS_EXTRAS.cascadaChocolate;
+    if(marcado("extraCafeteria"))total+=PRECIOS_EXTRAS.cafeteria;
+    if(marcado("extraSandwiches"))total+=PRECIOS_EXTRAS.sandwiches;
+    if(marcado("extraPanchos"))total+=PRECIOS_EXTRAS.panchos;
+    if(marcado("extraHelados"))total+=PRECIOS_EXTRAS.helados;
+    if(marcado("extraChocolateTaza"))total+=PRECIOS_EXTRAS.chocolateTaza;
+    if(marcado("extraPicetas"))total+=PRECIOS_EXTRAS.picetas;
+    if(marcado("extraGelatina"))total+=PRECIOS_EXTRAS.gelatina;
+    if(marcado("extraFlan"))total+=PRECIOS_EXTRAS.flan;
+    if(marcado("extraPataMuslo"))total+=cantidadExtra("cantidadPataMuslo")*PRECIOS_EXTRAS.pataMusloPersona;
+    if(marcado("extraJugo"))total+=cantidadExtra("cantidadJugo")*PRECIOS_EXTRAS.jugoBidon;
+
+    return total;
+}
+
+function actualizarControlesCantidad(){
+    const pares=[
+        ["extraAlgodon","cantidadAlgodon"],
+        ["extraMesas","cantidadMesas"],
+        ["extraSillas","cantidadSillas"],
+        ["extraPataMuslo","cantidadPataMuslo"],
+        ["extraJugo","cantidadJugo"]
+    ];
+    pares.forEach(([checkId,inputId])=>{
+        const check=document.getElementById(checkId);
+        const input=document.getElementById(inputId);
+        if(!check||!input)return;
+        input.disabled=!check.checked;
+        if(check.checked && (!input.value || Number(input.value)<1))input.value="1";
+    });
+
+    actualizarEstadosExtras();
+}
+
+function actualizarPrecioPorExtras(){
+    const campo=document.getElementById("precio");
+    if(!campo)return;
+
+    actualizarControlesCantidad();
+    actualizarEstadosExtras();
+    const total=Math.max(0,Number(precioBaseEvento||0)+totalExtrasConPrecio());
+    campo.value=total;
+    actualizarResumenPago();
+    actualizarDesglosePrecio();
+}
+
+function actualizarDesglosePrecio(){
+    const contenedor=document.getElementById("desglosePrecioExtras");
+    if(!contenedor)return;
+
+    const extras=[];
+    const marcado=id=>!!document.getElementById(id)?.checked;
+
+    if(marcado("extraToro"))extras.push(`🐂 Toro +${dinero(PRECIOS_EXTRAS.toro)}`);
+    if(marcado("extraMaquillaje"))extras.push(extraEsRegalo("estadoMaquillaje") ? `🎨 Maquillaje 🎁 REGALO` : `🎨 Maquillaje +${dinero(PRECIOS_EXTRAS.maquillaje)}`);
+    if(marcado("extraPochoclos"))extras.push(extraEsRegalo("estadoPochoclos") ? `🍿 Pochoclos (20 niños) 🎁 REGALO` : `🍿 Pochoclos (20 niños) +${dinero(PRECIOS_EXTRAS.pochoclos)}`);
+    if(marcado("extraAlgodon"))extras.push(extraEsRegalo("estadoAlgodon") ? `🍭 Algodones x${cantidadExtra("cantidadAlgodon")} 🎁 REGALO` : `🍭 Algodones x${cantidadExtra("cantidadAlgodon")} +${dinero(cantidadExtra("cantidadAlgodon")*PRECIOS_EXTRAS.algodonUnidad)}`);
+    if(marcado("extra360"))extras.push(`📸 Plataforma 360 +${dinero(PRECIOS_EXTRAS.plataforma360)}`);
+    if(marcado("extraMesas"))extras.push(`🪑 Mesas x${cantidadExtra("cantidadMesas")} +${dinero(cantidadExtra("cantidadMesas")*PRECIOS_EXTRAS.mesasUnidad)}`);
+    if(marcado("extraSillas"))extras.push(`🪑 Sillas x${cantidadExtra("cantidadSillas")} +${dinero(cantidadExtra("cantidadSillas")*PRECIOS_EXTRAS.sillasUnidad)}`);
+    if(marcado("extraMozo"))extras.push(`🍽️ Mozo +${dinero(PRECIOS_EXTRAS.mozo)}`);
+    if(marcado("extraHoraAdicional"))extras.push(`⏱️ Hora adicional +${dinero(PRECIOS_EXTRAS.horaAdicional)}`);
+    if(marcado("extraLicuados"))extras.push(`🥤 Licuados (30 personas) +${dinero(PRECIOS_EXTRAS.licuados)}`);
+    if(marcado("extraChocolate"))extras.push(`🍫 Cascada (30 personas) +${dinero(PRECIOS_EXTRAS.cascadaChocolate)}`);
+    if(marcado("extraCafeteria"))extras.push(`☕ Cafetería +${dinero(PRECIOS_EXTRAS.cafeteria)}`);
+    if(marcado("extraSandwiches"))extras.push(`🥪 Sándwiches x100 +${dinero(PRECIOS_EXTRAS.sandwiches)}`);
+    if(marcado("extraPanchos"))extras.push(`🌭 Panchos x24 +${dinero(PRECIOS_EXTRAS.panchos)}`);
+    if(marcado("extraHelados"))extras.push(`🍨 Helados x30 +${dinero(PRECIOS_EXTRAS.helados)}`);
+    if(marcado("extraChocolateTaza"))extras.push(`☕ Chocolate x40 tazas +${dinero(PRECIOS_EXTRAS.chocolateTaza)}`);
+    if(marcado("extraPicetas"))extras.push(`🍕 Picetas x24 +${dinero(PRECIOS_EXTRAS.picetas)}`);
+    if(marcado("extraGelatina"))extras.push(`🍮 Gelatina x12 +${dinero(PRECIOS_EXTRAS.gelatina)}`);
+    if(marcado("extraFlan"))extras.push(`🍮 Flan x12 +${dinero(PRECIOS_EXTRAS.flan)}`);
+    if(marcado("extraPataMuslo"))extras.push(`🍗 Pata muslo x${cantidadExtra("cantidadPataMuslo")} +${dinero(cantidadExtra("cantidadPataMuslo")*PRECIOS_EXTRAS.pataMusloPersona)}`);
+    if(marcado("extraJugo"))extras.push(`🧃 Jugo x${cantidadExtra("cantidadJugo")} bidón(es) +${dinero(cantidadExtra("cantidadJugo")*PRECIOS_EXTRAS.jugoBidon)}`);
+
+    contenedor.innerHTML=extras.length
+        ? `<strong>Extras con costo:</strong> ${extras.join(" · ")}`
+        : "Sin extras con costo";
+}
+
+function calcularPrecioBaseAlEditar(evento){
+    const extras=evento?.extras||{};
+    let cargos=0;
+
+    if(extras.toro)cargos+=PRECIOS_EXTRAS.toro;
+    if(extras.maquillaje && !extras.maquillajeRegalo)cargos+=PRECIOS_EXTRAS.maquillaje;
+    if(extras.pochoclos && !extras.pochoclosRegalo)cargos+=PRECIOS_EXTRAS.pochoclos;
+    if(extras.algodon && !extras.algodonRegalo)cargos+=cantidadGuardada(extras.algodon)*PRECIOS_EXTRAS.algodonUnidad;
+    if(extras.plataforma360)cargos+=PRECIOS_EXTRAS.plataforma360;
+    if(extras.mesas)cargos+=cantidadGuardada(extras.mesas)*PRECIOS_EXTRAS.mesasUnidad;
+    if(extras.sillas)cargos+=cantidadGuardada(extras.sillas)*PRECIOS_EXTRAS.sillasUnidad;
+    if(extras.mozo)cargos+=PRECIOS_EXTRAS.mozo;
+    if(extras.horaAdicional)cargos+=PRECIOS_EXTRAS.horaAdicional;
+    if(extras.licuados)cargos+=PRECIOS_EXTRAS.licuados;
+    if(extras.cascadaChocolate)cargos+=PRECIOS_EXTRAS.cascadaChocolate;
+    if(extras.cafeteria)cargos+=PRECIOS_EXTRAS.cafeteria;
+    if(extras.sandwiches)cargos+=PRECIOS_EXTRAS.sandwiches;
+    if(extras.panchos)cargos+=PRECIOS_EXTRAS.panchos;
+    if(extras.helados)cargos+=PRECIOS_EXTRAS.helados;
+    if(extras.chocolateTaza)cargos+=PRECIOS_EXTRAS.chocolateTaza;
+    if(extras.picetas)cargos+=PRECIOS_EXTRAS.picetas;
+    if(extras.gelatina)cargos+=PRECIOS_EXTRAS.gelatina;
+    if(extras.flan)cargos+=PRECIOS_EXTRAS.flan;
+    if(extras.pataMuslo)cargos+=cantidadGuardada(extras.pataMuslo)*PRECIOS_EXTRAS.pataMusloPersona;
+    if(extras.jugo)cargos+=cantidadGuardada(extras.jugo)*PRECIOS_EXTRAS.jugoBidon;
+
+    return Math.max(0,Number(evento?.precio||0)-cargos);
+}
+
+function cambiarPrecioBaseDesdeCampo(){
+    const campo=document.getElementById("precio");
+    if(!campo)return;
+    precioBaseEvento=Math.max(0,(Number(campo.value)||0)-totalExtrasConPrecio());
+    actualizarResumenPago();
+    actualizarDesglosePrecio();
+}
+
 function limpiarExtras(){
-    document.querySelectorAll(".extra input").forEach(i=>i.checked=false);
+    document.querySelectorAll(".extra input[type=checkbox]").forEach(i=>i.checked=false);
+    document.querySelectorAll(".cantidad-extra").forEach(i=>{
+        i.value="1";
+        i.disabled=true;
+    });
+    document.querySelectorAll(".estado-extra").forEach(i=>{
+        i.value="paga";
+        i.disabled=true;
+    });
+    actualizarDesglosePrecio();
 }
 
 /* ============================================================
@@ -960,15 +1228,28 @@ async function guardarEvento(){
         extras:{
             toro:document.getElementById("extraToro").checked,
             maquillaje:document.getElementById("extraMaquillaje").checked,
+            maquillajeRegalo:document.getElementById("extraMaquillaje").checked && document.getElementById("estadoMaquillaje").value==="regalo",
             pochoclos:document.getElementById("extraPochoclos").checked,
-            algodon:document.getElementById("extraAlgodon").checked,
+            pochoclosRegalo:document.getElementById("extraPochoclos").checked && document.getElementById("estadoPochoclos").value==="regalo",
+            algodon:document.getElementById("extraAlgodon").checked ? cantidadExtra("cantidadAlgodon") : 0,
+            algodonRegalo:document.getElementById("extraAlgodon").checked && document.getElementById("estadoAlgodon").value==="regalo",
             plataforma360:document.getElementById("extra360").checked,
-            sillas:document.getElementById("extraSillas").checked,
-            mesas:document.getElementById("extraMesas").checked,
+            sillas:document.getElementById("extraSillas").checked ? cantidadExtra("cantidadSillas") : 0,
+            mesas:document.getElementById("extraMesas").checked ? cantidadExtra("cantidadMesas") : 0,
             mozo:document.getElementById("extraMozo").checked,
             horaAdicional:document.getElementById("extraHoraAdicional").checked,
             licuados:document.getElementById("extraLicuados").checked,
-            cascadaChocolate:document.getElementById("extraChocolate").checked
+            cascadaChocolate:document.getElementById("extraChocolate").checked,
+            cafeteria:document.getElementById("extraCafeteria").checked,
+            sandwiches:document.getElementById("extraSandwiches").checked,
+            panchos:document.getElementById("extraPanchos").checked,
+            helados:document.getElementById("extraHelados").checked,
+            chocolateTaza:document.getElementById("extraChocolateTaza").checked,
+            picetas:document.getElementById("extraPicetas").checked,
+            gelatina:document.getElementById("extraGelatina").checked,
+            flan:document.getElementById("extraFlan").checked,
+            pataMuslo:document.getElementById("extraPataMuslo").checked ? cantidadExtra("cantidadPataMuslo") : 0,
+            jugo:document.getElementById("extraJugo").checked ? cantidadExtra("cantidadJugo") : 0
         }
     };
 
@@ -1071,15 +1352,25 @@ function listaExtrasEvento(evento){
     const lista=[];
     if(extras.toro)lista.push("🐂 Toro mecánico");
     if(extras.plataforma360)lista.push("📸 Plataforma 360");
-    if(extras.sillas)lista.push("🪑 Sillas");
-    if(extras.mesas)lista.push("🪑 Mesas");
+    if(extras.sillas)lista.push(`🪑 Sillas x${cantidadGuardada(extras.sillas)}`);
+    if(extras.mesas)lista.push(`🪑 Mesas x${cantidadGuardada(extras.mesas)}`);
     if(extras.mozo)lista.push("🍽️ Mozo extra");
     if(extras.horaAdicional)lista.push("⏱️ Hora adicional");
-    if(extras.maquillaje)lista.push("🎨 Maquillaje");
-    if(extras.pochoclos)lista.push("🍿 Pochoclos");
-    if(extras.algodon)lista.push("🍭 Algodón de azúcar");
-    if(extras.licuados)lista.push("🥤 Licuados");
-    if(extras.cascadaChocolate)lista.push("🍫 Cascada de chocolate");
+    if(extras.maquillaje)lista.push(extras.maquillajeRegalo ? "🎨 Maquillaje 🎁 REGALO" : "🎨 Maquillaje 💰");
+    if(extras.pochoclos)lista.push(extras.pochoclosRegalo ? "🍿 Pochoclos — 20 niños 🎁 REGALO" : "🍿 Pochoclos — 20 niños 💰");
+    if(extras.algodon)lista.push(extras.algodonRegalo ? `🍭 Algodón x${cantidadGuardada(extras.algodon)} 🎁 REGALO` : `🍭 Algodón x${cantidadGuardada(extras.algodon)} 💰`);
+    if(extras.licuados)lista.push("🥤 Licuados — 30 personas");
+    if(extras.cascadaChocolate)lista.push("🍫 Cascada — 30 personas");
+    if(extras.cafeteria)lista.push("☕ Cafetería");
+    if(extras.sandwiches)lista.push("🥪 Sándwiches — 100 unidades");
+    if(extras.panchos)lista.push("🌭 Panchos — 24 unidades");
+    if(extras.helados)lista.push("🍨 Helados — 30 copas");
+    if(extras.chocolateTaza)lista.push("☕ Chocolate en taza — 40 tazas");
+    if(extras.picetas)lista.push("🍕 Picetas — 24 unidades");
+    if(extras.gelatina)lista.push("🍮 Gelatina — 12 personas");
+    if(extras.flan)lista.push("🍮 Flan — 12 unidades");
+    if(extras.pataMuslo)lista.push(`🍗 Pata muslo x${cantidadGuardada(extras.pataMuslo)}`);
+    if(extras.jugo)lista.push(`🧃 Jugo x${cantidadGuardada(extras.jugo)} bidón(es)`);
     return lista;
 }
 
