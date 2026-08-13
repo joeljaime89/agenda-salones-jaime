@@ -207,6 +207,18 @@ header{
     min-height:30px !important;
     line-height:1.1 !important;
     font-size:13px !important;
+    /* En celular/tablet: deslizar verticalmente no debe activar/desactivar el extra. */
+    touch-action:pan-y !important;
+    user-select:none;
+    -webkit-user-select:none;
+    -webkit-tap-highlight-color:transparent;
+}
+.grupo .extra input[type="checkbox"]{
+    touch-action:manipulation;
+}
+.grupo .extra input[type="number"],
+.grupo .extra select{
+    touch-action:manipulation;
 }
 .grupo .extra input[type="checkbox"]{
     transform:scale(.88);
@@ -251,6 +263,7 @@ header{
 .modal-contenido .extra{
     background:rgba(255,255,255,.74);
     border-color:#c8eaf4 !important;
+    touch-action:pan-y !important;
 }
 
 
@@ -1704,6 +1717,78 @@ function actualizarAlertas(){
     contenedor.appendChild(panelBasicas);
     contenedor.appendChild(panelExtras);
 }
+
+/* ============================================================
+   EXTRAS — PROTECCIÓN CONTRA CLICS ACCIDENTALES AL DESLIZAR
+   En pantallas táctiles, un dedo que empieza sobre una casilla y
+   luego se mueve para hacer scroll puede terminar generando un
+   "click". Ese click no debe cambiar el estado del extra.
+============================================================ */
+(function protegerExtrasDeScroll(){
+    let gestoExtra=null;
+    let suprimirClickHasta=0;
+
+    function extraDesdePunto(e){
+        if(!e || typeof e.clientX!=="number" || typeof e.clientY!=="number") return null;
+        const el=document.elementFromPoint(e.clientX,e.clientY);
+        return el && el.closest ? el.closest(".extra") : null;
+    }
+
+    document.addEventListener("pointerdown",function(e){
+        const extra=extraDesdePunto(e);
+        if(!extra)return;
+
+        gestoExtra={
+            extra,
+            pointerId:e.pointerId,
+            x:e.clientX,
+            y:e.clientY,
+            seMovio:false
+        };
+    },true);
+
+    document.addEventListener("pointermove",function(e){
+        if(!gestoExtra || e.pointerId!==gestoExtra.pointerId)return;
+
+        const dx=e.clientX-gestoExtra.x;
+        const dy=e.clientY-gestoExtra.y;
+
+        // 8 px evita falsos movimientos, pero bloquea el click si realmente se desliza.
+        if(Math.hypot(dx,dy)>8){
+            gestoExtra.seMovio=true;
+            suprimirClickHasta=Date.now()+450;
+        }
+    },true);
+
+    document.addEventListener("pointerup",function(e){
+        if(!gestoExtra || e.pointerId!==gestoExtra.pointerId)return;
+
+        if(gestoExtra.seMovio){
+            suprimirClickHasta=Date.now()+450;
+        }
+
+        gestoExtra=null;
+    },true);
+
+    document.addEventListener("pointercancel",function(e){
+        if(gestoExtra && e.pointerId===gestoExtra.pointerId){
+            suprimirClickHasta=Date.now()+450;
+            gestoExtra=null;
+        }
+    },true);
+
+    document.addEventListener("click",function(e){
+        if(Date.now()>=suprimirClickHasta)return;
+
+        const extra=e.target && e.target.closest ? e.target.closest(".extra") : null;
+        if(extra){
+            // Si el click viene inmediatamente después de un gesto de scroll,
+            // impedir que el <label> cambie accidentalmente el checkbox.
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    },true);
+})();
 
 /* ============================================================
    CLICS DEL CALENDARIO — SISTEMA ROBUSTO
