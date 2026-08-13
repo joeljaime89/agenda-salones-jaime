@@ -227,6 +227,16 @@ header{
     .horario-casilla{width:125px!important}
 }
 
+
+/* ===== SEGURIDAD DE CLIC EN CASILLAS DEL CALENDARIO ===== */
+.calendario .turno{
+    pointer-events:auto!important;
+    cursor:pointer!important;
+}
+.calendario .turno *{
+    pointer-events:none;
+}
+
 </style>
 </head>
 
@@ -805,11 +815,16 @@ function crearTurno(contenedor,fecha,hora,salon){
         turno.appendChild(deuda);
 
         turno.title="Editar reserva";
-        turno.onclick=function(e){
-            e.preventDefault();
-            e.stopPropagation();
+        const editarReserva=function(e){
+            if(e){e.preventDefault();e.stopPropagation();}
             editarEvento(evento.id);
         };
+        turno.onclick=editarReserva;
+        turno.addEventListener("click",editarReserva,false);
+        turno.addEventListener("pointerup",function(e){
+            if(e.button !== undefined && e.button !== 0)return;
+            editarReserva(e);
+        },false);
     }else{
         turno.title=`Reservar ${salon.nombre} — ${fechaTexto(fecha)} — ${hora}`;
         const abrirReserva=function(e){
@@ -817,6 +832,11 @@ function crearTurno(contenedor,fecha,hora,salon){
             abrirNuevoEvento(fecha,salon.nombre,hora);
         };
         turno.onclick=abrirReserva;
+        turno.addEventListener("click",abrirReserva,false);
+        turno.addEventListener("pointerup",function(e){
+            if(e.button !== undefined && e.button !== 0)return;
+            abrirReserva(e);
+        },false);
         turno.addEventListener("keydown",function(e){
             if(e.key==="Enter" || e.key===" "){abrirReserva(e);}
         });
