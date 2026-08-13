@@ -33,10 +33,46 @@ header{
 .tarjeta-resumen{background:rgba(255,255,255,.96);border-radius:15px;padding:15px;text-align:center;box-shadow:0 5px 16px rgba(0,0,0,.16)}
 .tarjeta-resumen h3{margin:0 0 7px;font-size:14px}.numero-resumen{font-size:24px;font-weight:900;color:#7b2cbf}
 
-.alertas{margin-bottom:14px}.alerta{
+.alertas{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:14px;
+    margin-bottom:14px;
+}
+.panel-alertas{
+    background:rgba(255,255,255,.12);
+    border-radius:14px;
+    padding:10px;
+    min-width:0;
+}
+.titulo-alertas{
+    color:#fff;
+    font-size:17px;
+    font-weight:900;
+    margin:0 0 9px;
+    padding:10px 12px;
+    border-radius:10px;
+    background:rgba(0,0,0,.16);
+}
+.lista-alertas{min-height:10px}
+.alerta{
     background:#fff3cd;border-left:6px solid #ffc107;border-radius:10px;padding:12px 14px;
-    margin-bottom:7px;box-shadow:0 2px 8px rgba(0,0,0,.1)
-}.alerta-hoy{background:#ffe3e3;border-left-color:#dc3545}
+    margin-bottom:7px;box-shadow:0 2px 8px rgba(0,0,0,.1);
+}
+.alerta-hoy{background:#ffe3e3;border-left-color:#dc3545}
+.alerta-extra{background:#e8f7ff;border-left-color:#0288d1}
+.alerta-extra .extras-linea{margin-top:5px;font-weight:800}
+.sin-alertas{
+    background:rgba(255,255,255,.92);
+    color:#555;
+    border-radius:10px;
+    padding:13px;
+    text-align:center;
+    font-weight:800;
+}
+@media(max-width:850px){
+    .alertas{grid-template-columns:1fr}
+}
 
 .controles{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
 .boton{border:0;border-radius:9px;padding:10px 15px;cursor:pointer;font-weight:bold;font-size:14px;transition:.2s}
@@ -65,7 +101,7 @@ header{
 .bloque-cuarto{border:2px solid #777}.encabezado-cuarto{background:linear-gradient(135deg,#777,#444);color:#fff}
 .encabezado-salon{padding:6px;display:flex;align-items:center;justify-content:space-between;gap:4px}
 .nombre-salon{font-size:11px;font-weight:900;line-height:1.1}.estado-salon{font-size:8px;font-weight:900;padding:3px 5px;border-radius:20px;background:rgba(255,255,255,.88);white-space:nowrap}
-.lista-horarios{padding:5px}.turno{border-radius:6px;padding:5px;margin-bottom:4px;cursor:pointer;font-size:9px;border:1px solid #ddd;transition:.15s}
+.lista-horarios{padding:5px}.turno{border-radius:6px;user-select:none;touch-action:manipulation;padding:5px;margin-bottom:4px;cursor:pointer;position:relative;z-index:2;pointer-events:auto;font-size:9px;border:1px solid #ddd;transition:.15s}
 .turno:last-child{margin-bottom:0}.turno:hover{transform:scale(1.012)}
 .turno-libre{background:#e9f8ef;border-color:#198754}.turno-ocupado{background:#ffe8eb;border-color:#dc3545}
 .turno-hora{font-size:11px;font-weight:900}.turno-estado{margin-top:2px;font-weight:bold}
@@ -87,17 +123,6 @@ header{
 .horarios-rapidos{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
 .boton-horario{background:#eee;border:2px solid #ccc;padding:12px;border-radius:8px;cursor:pointer;font-weight:900}
 .boton-horario.seleccionado{background:#7b2cbf;border-color:#5a189a;color:#fff}
-.horario-editable{
-    display:flex;align-items:center;justify-content:center;gap:6px;
-    background:#eee;border:2px solid #ccc;padding:8px;border-radius:8px;
-    font-weight:900;cursor:pointer
-}
-.horario-editable.seleccionado{background:#7b2cbf;border-color:#5a189a;color:#fff}
-.horario-editable input{
-    width:105px;border:0;background:transparent;color:inherit;
-    font:inherit;text-align:center;cursor:pointer;outline:none
-}
-.horario-editable input::-webkit-calendar-picker-indicator{cursor:pointer}
 .disponibilidad{padding:12px;border-radius:10px;background:#f3f3f3;margin-bottom:14px}
 .disponibilidad-linea{padding:4px 0;font-weight:900}.libre{color:#198754}.ocupado{color:#dc3545}
 .extras{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}.extra{background:#f2f2f2;border-radius:8px;padding:10px;cursor:pointer}.extra:hover{background:#e7d7f7}
@@ -193,20 +218,11 @@ header{
 </div>
 
 <div class="grupo">
-<label>🕐 Horarios rápidos (podés editar los 3) <span style="font-size:12px;font-weight:normal;color:#666">— el evento ocupa la casilla más cercana a su horario real</span></label>
+<label>🕐 Horario del evento <span style="font-size:12px;font-weight:normal;color:#666">(13:00, 17:00 y 21:00 son horarios rápidos opcionales)</span></label>
 <div class="horarios-rapidos">
-    <label class="horario-editable" id="contenedorHorario0">
-        🕐 <input id="horario0" type="time" value="13:00" title="Editar horario rápido 1"
-            onchange="cambiarHorarioRapido(0,this.value)" onclick="seleccionarHorarioRapido(0)">
-    </label>
-    <label class="horario-editable" id="contenedorHorario1">
-        🕐 <input id="horario1" type="time" value="17:00" title="Editar horario rápido 2"
-            onchange="cambiarHorarioRapido(1,this.value)" onclick="seleccionarHorarioRapido(1)">
-    </label>
-    <label class="horario-editable" id="contenedorHorario2">
-        🕐 <input id="horario2" type="time" value="21:00" title="Editar horario rápido 3"
-            onchange="cambiarHorarioRapido(2,this.value)" onclick="seleccionarHorarioRapido(2)">
-    </label>
+    <button type="button" id="horario13" class="boton-horario" onclick="seleccionarHorario('13:00')">🕐 13:00</button>
+    <button type="button" id="horario17" class="boton-horario" onclick="seleccionarHorario('17:00')">🕔 17:00</button>
+    <button type="button" id="horario21" class="boton-horario" onclick="seleccionarHorario('21:00')">🕘 21:00</button>
 </div>
 </div>
 
@@ -266,7 +282,8 @@ header{
     <label class="extra"><input id="extra360" type="checkbox">📸 Plataforma 360</label>
     <label class="extra"><input id="extraSillas" type="checkbox">🪑 Sillas</label>
     <label class="extra"><input id="extraMesas" type="checkbox">🪑 Mesas</label>
-    <label class="extra"><input id="extraMozo" type="checkbox">🍽️ Mozo</label>
+    <label class="extra"><input id="extraMozo" type="checkbox">🍽️ Mozo extra</label>
+    <label class="extra"><input id="extraHoraAdicional" type="checkbox">⏱️ Hora adicional</label>
     <label class="extra"><input id="extraLicuados" type="checkbox">🥤 Licuados</label>
     <label class="extra"><input id="extraChocolate" type="checkbox">🍫 Cascada de chocolate</label>
 </div>
@@ -312,56 +329,7 @@ const supabaseClient = window.supabase.createClient(
     }
 );
 
-let HORARIOS=cargarHorariosRapidos();
-
-function cargarHorariosRapidos(){
-    try{
-        const guardados=JSON.parse(localStorage.getItem("agendaHorariosRapidos")||"null");
-        if(Array.isArray(guardados) && guardados.length===3 && guardados.every(h=>/^([01]\\d|2[0-3]):[0-5]\\d$/.test(h))){
-            return guardados;
-        }
-    }catch(e){}
-    return ["13:00","17:00","21:00"];
-}
-
-function guardarHorariosRapidos(){
-    try{localStorage.setItem("agendaHorariosRapidos",JSON.stringify(HORARIOS));}catch(e){}
-}
-
-function renderizarHorariosRapidos(){
-    HORARIOS.forEach((hora,i)=>{
-        const input=document.getElementById("horario"+i);
-        if(input)input.value=hora;
-    });
-    actualizarBotonesHorario();
-}
-
-function seleccionarHorarioRapido(indice){
-    const hora=HORARIOS[indice];
-    if(hora)seleccionarHorario(hora);
-}
-
-function cambiarHorarioRapido(indice,hora){
-    if(!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(hora))return;
-
-    const anteriores=[...HORARIOS];
-    HORARIOS[indice]=hora;
-
-    // Evita que dos casillas terminen con el mismo horario.
-    if(new Set(HORARIOS).size<3){
-        HORARIOS=anteriores;
-        renderizarHorariosRapidos();
-        alert("Los tres horarios rápidos deben ser diferentes.");
-        return;
-    }
-
-    HORARIOS.sort((a,b)=>horaEnMinutos(a)-horaEnMinutos(b));
-    guardarHorariosRapidos();
-    renderizarHorariosRapidos();
-    generarCalendario();
-    actualizarDisponibilidad();
-}
-
+const HORARIOS=["13:00","17:00","21:00"];
 const SALONES=[
     {nombre:"Shalom",emoji:"🟡",clase:"shalom",logo:"IMG/logoP.png"},
     {nombre:"Mundo Mágico",emoji:"🔴",clase:"mundo",logo:"IMG/logo1.png"},
@@ -634,7 +602,7 @@ function crearBloqueSalon(fecha,salon){
     lista.className="lista-horarios";
 
     HORARIOS.forEach(hora=>crearTurno(lista,fecha,hora,salon));
-    eventosSalon.filter(e=>!HORARIOS.some(h=>eventoParaHorario(e,h))).forEach(e=>crearEventoVisual(lista,e,salon));
+    eventosSalon.filter(e=>!HORARIOS.includes(e.hora)).forEach(e=>crearEventoVisual(lista,e,salon));
 
     bloque.appendChild(lista);
     return bloque;
@@ -650,63 +618,27 @@ function horaEnMinutos(hora){
 
 function eventoParaHorario(evento,horaBase){
     if(!evento || evento.fecha===undefined)return false;
-
     const inicioEvento=horaEnMinutos(evento.hora);
-    const base=horaEnMinutos(horaBase);
-    if(inicioEvento===null || base===null)return false;
+    const inicioHorario=horaEnMinutos(horaBase);
+    if(inicioEvento===null || inicioHorario===null)return false;
 
     /*
-        Los tres horarios rápidos son CASILLAS/ESPACIOS visuales.
+        Los horarios 13:00, 17:00 y 21:00 son ahora bloques de referencia,
+        no horarios obligatorios.
 
-        El evento se coloca en la casilla cuyo horario está MÁS CERCA
-        del horario real del evento.
+        Ejemplos:
+        13:00 - 16:59  -> bloque 13:00
+        17:00 - 20:59  -> bloque 17:00
+        21:00 en adelante -> bloque 21:00
 
-        Ejemplo con 13:00 / 17:00 / 21:00:
-
-          13:00 -> casilla 13
-          13:30 -> casilla 13
-          14:30 -> casilla 13
-          15:00 -> casilla 17
-          16:00 -> casilla 17   <-- caso que necesitás
-          17:00 -> casilla 17
-          18:30 -> casilla 17
-          19:00 -> casilla 21
-          20:30 -> casilla 21
-          21:00 -> casilla 21
-
-        Si cambiás las casillas, por ejemplo a:
-          12:00 / 16:00 / 20:00
-
-        automáticamente se usan esos nuevos horarios como referencia.
-
-        IMPORTANTE:
-        El horario REAL del evento nunca se modifica.
-        Si la reserva es a las 16:00, la tarjeta muestra "16:00",
-        pero ocupa visualmente la casilla de referencia de 17:00.
+        De esta forma, un evento a las 13:30 ocupa el bloque de las 13:00
+        y nunca queda mostrando "13:00 LIBRE".
     */
+    if(inicioHorario===13*60)return inicioEvento>=13*60 && inicioEvento<17*60;
+    if(inicioHorario===17*60)return inicioEvento>=17*60 && inicioEvento<21*60;
+    if(inicioHorario===21*60)return inicioEvento>=21*60;
 
-    const horarios=[...HORARIOS]
-        .map((h,i)=>({hora:h,min:horaEnMinutos(h),indice:i}))
-        .filter(x=>x.min!==null)
-        .sort((a,b)=>a.min-b.min);
-
-    if(!horarios.length)return false;
-
-    // Encontramos el horario rápido más cercano al horario real.
-    let masCercano=horarios[0];
-    let menorDistancia=Math.abs(inicioEvento-masCercano.min);
-
-    for(let i=1;i<horarios.length;i++){
-        const distancia=Math.abs(inicioEvento-horarios[i].min);
-
-        // En caso de empate elegimos el horario posterior.
-        if(distancia<menorDistancia || (distancia===menorDistancia && horarios[i].min>masCercano.min)){
-            masCercano=horarios[i];
-            menorDistancia=distancia;
-        }
-    }
-
-    return masCercano.min===base;
+    return inicioEvento===inicioHorario;
 }
 
 function crearTurno(contenedor,fecha,hora,salon){
@@ -718,6 +650,14 @@ function crearTurno(contenedor,fecha,hora,salon){
 
     const turno=document.createElement("div");
     turno.className=evento?"turno turno-ocupado":"turno turno-libre";
+    // Guardamos la acción directamente en la casilla para que el clic
+    // siga funcionando aunque se regenere el calendario.
+    turno.dataset.fecha=fecha;
+    turno.dataset.salon=salon.nombre;
+    turno.dataset.horaBase=hora;
+    turno.dataset.eventoId=evento ? String(evento.id ?? "") : "";
+    turno.setAttribute("role","button");
+    turno.setAttribute("tabindex","0");
 
     const horaElemento=document.createElement("div");
     horaElemento.className="turno-hora";
@@ -744,9 +684,22 @@ function crearTurno(contenedor,fecha,hora,salon){
         deuda.textContent=deudaEvento(evento)>0?"💰 Debe "+dinero(deudaEvento(evento)):"✅ PAGADO";
         turno.appendChild(deuda);
 
-        turno.onclick=e=>{e.stopPropagation();editarEvento(evento.id)};
+        turno.title="Editar reserva";
+        turno.onclick=function(e){
+            e.preventDefault();
+            e.stopPropagation();
+            editarEvento(evento.id);
+        };
     }else{
-        turno.onclick=e=>{e.stopPropagation();abrirNuevoEvento(fecha,salon.nombre,hora)};
+        turno.title=`Reservar ${salon.nombre} — ${fechaTexto(fecha)} — ${hora}`;
+        const abrirReserva=function(e){
+            if(e){e.preventDefault();e.stopPropagation();}
+            abrirNuevoEvento(fecha,salon.nombre,hora);
+        };
+        turno.onclick=abrirReserva;
+        turno.addEventListener("keydown",function(e){
+            if(e.key==="Enter" || e.key===" "){abrirReserva(e);}
+        });
     }
 
     contenedor.appendChild(turno);
@@ -838,6 +791,7 @@ function editarEvento(id){
     document.getElementById("extraSillas").checked=!!extras.sillas;
     document.getElementById("extraMesas").checked=!!extras.mesas;
     document.getElementById("extraMozo").checked=!!extras.mozo;
+    document.getElementById("extraHoraAdicional").checked=!!extras.horaAdicional;
     document.getElementById("extraLicuados").checked=!!extras.licuados;
     document.getElementById("extraChocolate").checked=!!extras.cascadaChocolate;
 
@@ -971,10 +925,22 @@ async function guardarEvento(){
     const salon=document.getElementById("salon").value;
     const hora=document.getElementById("hora").value;
 
-    if(!fecha){alert("Seleccioná una fecha.");return}
-    if(!hora){alert("Seleccioná un horario.");return}
+    if(!fecha){
+        guardandoEvento=false;
+        if(botonGuardar){botonGuardar.disabled=false;botonGuardar.textContent=textoOriginal;}
+        alert("Seleccioná una fecha.");
+        return;
+    }
+    if(!hora){
+        guardandoEvento=false;
+        if(botonGuardar){botonGuardar.disabled=false;botonGuardar.textContent=textoOriginal;}
+        alert("Seleccioná un horario.");
+        return;
+    }
 
     if(estaOcupado(fecha,hora,salon)){
+        guardandoEvento=false;
+        if(botonGuardar){botonGuardar.disabled=false;botonGuardar.textContent=textoOriginal;}
         alert("❌ Ese salón ya está ocupado en ese horario.");
         return;
     }
@@ -1000,6 +966,7 @@ async function guardarEvento(){
             sillas:document.getElementById("extraSillas").checked,
             mesas:document.getElementById("extraMesas").checked,
             mozo:document.getElementById("extraMozo").checked,
+            horaAdicional:document.getElementById("extraHoraAdicional").checked,
             licuados:document.getElementById("extraLicuados").checked,
             cascadaChocolate:document.getElementById("extraChocolate").checked
         }
@@ -1099,24 +1066,122 @@ function actualizarResumen(){
     actualizarAlertas();
 }
 
+function listaExtrasEvento(evento){
+    const extras=evento?.extras||{};
+    const lista=[];
+    if(extras.toro)lista.push("🐂 Toro mecánico");
+    if(extras.plataforma360)lista.push("📸 Plataforma 360");
+    if(extras.sillas)lista.push("🪑 Sillas");
+    if(extras.mesas)lista.push("🪑 Mesas");
+    if(extras.mozo)lista.push("🍽️ Mozo extra");
+    if(extras.horaAdicional)lista.push("⏱️ Hora adicional");
+    if(extras.maquillaje)lista.push("🎨 Maquillaje");
+    if(extras.pochoclos)lista.push("🍿 Pochoclos");
+    if(extras.algodon)lista.push("🍭 Algodón de azúcar");
+    if(extras.licuados)lista.push("🥤 Licuados");
+    if(extras.cascadaChocolate)lista.push("🍫 Cascada de chocolate");
+    return lista;
+}
+
 function actualizarAlertas(){
     const contenedor=document.getElementById("alertas");
+    if(!contenedor)return;
     contenedor.innerHTML="";
     const hoy=obtenerFechaHoy();
+    const año=fechaActual.getFullYear();
+    const mes=fechaActual.getMonth();
 
+    const panelBasicas=document.createElement("section");
+    panelBasicas.className="panel-alertas";
+    panelBasicas.innerHTML='<h3 class="titulo-alertas">⚠️ Alertas básicas</h3><div id="listaAlertasBasicas" class="lista-alertas"></div>';
+
+    const listaBasicas=panelBasicas.querySelector("#listaAlertasBasicas");
     const deudores=eventos
         .filter(e=>deudaEvento(e)>0)
         .sort((a,b)=>(a.fecha+a.hora).localeCompare(b.fecha+b.hora));
 
-    deudores.forEach(evento=>{
-        const alerta=document.createElement("div");
-        alerta.className=evento.fecha===hoy?"alerta alerta-hoy":"alerta";
-        alerta.innerHTML=`${evento.fecha===hoy?"🔔":"⚠️"} <strong>${evento.salon}</strong> — 📅 ${fechaTexto(evento.fecha)} — 🕐 ${evento.hora} — 📞 ${evento.telefono||"Sin teléfono"} — 💰 Debe: <strong>${dinero(deudaEvento(evento))}</strong>${evento.fecha===hoy?" 🔔 EVENTO DE HOY":""}`;
-        alerta.style.cursor="pointer";
-        alerta.onclick=()=>editarEvento(evento.id);
-        contenedor.appendChild(alerta);
-    });
+    if(!deudores.length){
+        listaBasicas.innerHTML='<div class="sin-alertas">✅ No hay dinero adeudado.</div>';
+    }else{
+        deudores.forEach(evento=>{
+            const alerta=document.createElement("div");
+            alerta.className=evento.fecha===hoy?"alerta alerta-hoy":"alerta";
+            alerta.innerHTML=`${evento.fecha===hoy?"🔔":"⚠️"} <strong>${evento.salon}</strong> — 📅 ${fechaTexto(evento.fecha)} — 🕐 ${evento.hora} — 📞 ${evento.telefono||"Sin teléfono"} — 💰 Debe: <strong>${dinero(deudaEvento(evento))}</strong>${evento.fecha===hoy?" 🔔 EVENTO DE HOY":""}`;
+            alerta.style.cursor="pointer";
+            alerta.onclick=()=>editarEvento(evento.id);
+            listaBasicas.appendChild(alerta);
+        });
+    }
+
+    const panelExtras=document.createElement("section");
+    panelExtras.className="panel-alertas";
+    panelExtras.innerHTML=`<h3 class="titulo-alertas">🎪 Alertas de extras — ${MESES[mes]} ${año}</h3><div id="listaAlertasExtras" class="lista-alertas"></div>`;
+
+    const listaExtras=panelExtras.querySelector("#listaAlertasExtras");
+    const eventosConExtras=eventos
+        .filter(e=>{
+            const f=new Date(String(e.fecha)+"T00:00:00");
+            return f.getFullYear()===año && f.getMonth()===mes && listaExtrasEvento(e).length>0;
+        })
+        .sort((a,b)=>(a.fecha+a.hora).localeCompare(b.fecha+b.hora));
+
+    if(!eventosConExtras.length){
+        listaExtras.innerHTML='<div class="sin-alertas">📭 No hay extras registrados este mes.</div>';
+    }else{
+        eventosConExtras.forEach(evento=>{
+            const extras=listaExtrasEvento(evento);
+            const alerta=document.createElement("div");
+            alerta.className="alerta alerta-extra";
+            alerta.innerHTML=`🎪 <strong>${evento.salon}</strong> — 📅 ${fechaTexto(evento.fecha)} — 🕐 ${evento.hora}<div class="extras-linea">${extras.join(" · ")}</div>${evento.nombre?`<div>🎂 ${evento.nombre}</div>`:""}${evento.telefono?`<div>📞 ${evento.telefono}</div>`:""}`;
+            alerta.style.cursor="pointer";
+            alerta.onclick=()=>editarEvento(evento.id);
+            listaExtras.appendChild(alerta);
+        });
+    }
+
+    contenedor.appendChild(panelBasicas);
+    contenedor.appendChild(panelExtras);
 }
+
+/* ============================================================
+   CLICS DEL CALENDARIO — CONTROL DE SEGURIDAD
+   Permite abrir tanto reservas libres como reservas ocupadas.
+   Se usa delegación además del onclick directo para evitar que
+   una regeneración del calendario deje casillas sin responder.
+============================================================ */
+(function activarClicsCalendario(){
+    const calendario=document.getElementById("calendario");
+    if(!calendario)return;
+
+    calendario.addEventListener("click",function(e){
+        const turno=e.target.closest ? e.target.closest(".turno") : null;
+        if(!turno || !calendario.contains(turno))return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const id=turno.dataset.eventoId;
+        if(id){
+            editarEvento(id);
+        }else{
+            abrirNuevoEvento(
+                turno.dataset.fecha || "",
+                turno.dataset.salon || "Shalom",
+                turno.dataset.horaBase || ""
+            );
+        }
+    }, true);
+
+    calendario.addEventListener("keydown",function(e){
+        if(e.key!=="Enter" && e.key!==" ")return;
+        const turno=e.target.closest ? e.target.closest(".turno") : null;
+        if(!turno)return;
+        e.preventDefault();
+        const id=turno.dataset.eventoId;
+        if(id) editarEvento(id);
+        else abrirNuevoEvento(turno.dataset.fecha||"",turno.dataset.salon||"Shalom",turno.dataset.horaBase||"");
+    });
+})();
 
 /* ============================================================
    EVENTOS DE INTERFAZ
@@ -1132,7 +1197,6 @@ document.addEventListener("keydown",function(event){
    INICIO
 ============================================================ */
 (async function iniciar(){
-    renderizarHorariosRapidos();
     eventos=cargarCopiaLocal();
     generarCalendario();
     await cargarEventosDesdeNube();
