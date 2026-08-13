@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📅</text></svg>">
 <title>Agenda Salones Jaime</title>
 
 <!-- Supabase: biblioteca oficial para navegador vía CDN -->
@@ -247,8 +248,8 @@ header{
 <header>
     <div class="encabezado-contenido">
         <div class="logos-principales">
-            <img src="IMG/logoP.png" class="logo-principal" alt="Logo Shalom">
-            <img src="IMG/logo1.png" class="logo-principal" alt="Logo Mundo Mágico">
+            
+            
         </div>
         <h1 class="titulo-principal">Agenda Salones Jaime</h1>
         <div class="subtitulo">Agenda profesional de eventos</div>
@@ -876,7 +877,7 @@ function abrirNuevoEvento(fecha="",salon="Shalom",hora=""){
     document.getElementById("nombre").value="";
     document.getElementById("precio").value="";
     document.getElementById("informacion").value="";
-    document.getElementById("listaEmpleados").innerHTML="";
+    const listaEmpleados=document.getElementById("listaEmpleados"); if(listaEmpleados) listaEmpleados.innerHTML="";
     limpiarExtras();
     document.getElementById("btnEliminar").style.display="none";
     document.getElementById("fechaPago").value=obtenerFechaHoy();
@@ -941,8 +942,8 @@ function editarEvento(id){
     actualizarControlesCantidad();
     actualizarPrecioPorExtras();
 
-    document.getElementById("listaEmpleados").innerHTML="";
-    (evento.empleados||[]).forEach(n=>agregarEmpleado(n));
+    const listaEmpleados=document.getElementById("listaEmpleados"); if(listaEmpleados) listaEmpleados.innerHTML="";
+    if(document.getElementById("listaEmpleados")) (evento.empleados||[]).forEach(n=>agregarEmpleado(n));
 
     document.getElementById("btnEliminar").style.display="block";
     document.getElementById("fechaPago").value=obtenerFechaHoy();
@@ -1251,6 +1252,7 @@ function estaOcupado(fecha,hora,salon){
 ============================================================ */
 function agregarEmpleado(nombre=""){
     const lista=document.getElementById("listaEmpleados");
+    if(!lista)return;
     const fila=document.createElement("div");
     fila.className="empleado";
 
@@ -1264,7 +1266,9 @@ function agregarEmpleado(nombre=""){
     fila.appendChild(input);fila.appendChild(eliminar);lista.appendChild(fila);
 }
 function obtenerEmpleados(){
-    return Array.from(document.querySelectorAll("#listaEmpleados input"))
+    const lista=document.getElementById("listaEmpleados");
+    if(!lista)return [];
+    return Array.from(lista.querySelectorAll("input"))
         .map(i=>i.value.trim()).filter(Boolean);
 }
 
