@@ -115,7 +115,44 @@ header{
 .evento-hora{font-size:12px;font-weight:900}.evento-telefono{font-size:8px;margin-top:2px}.evento-deuda{font-size:8px;font-weight:900;margin-top:2px}
 
 .modal{display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.68);align-items:center;justify-content:center;padding:12px}
-.modal-contenido{width:100%;max-width:850px;max-height:95vh;overflow-y:auto;background:#fff;border-radius:17px;padding:23px;box-shadow:0 10px 35px rgba(0,0,0,.35)}
+.modal-contenido{
+    width:min(100%,900px);
+    max-width:900px;
+    max-height:95vh;
+    overflow-y:auto;
+    overflow-x:hidden;
+    box-sizing:border-box;
+    background:linear-gradient(135deg,#f0fbff 0%,#dff3ff 48%,#eee4ff 100%);
+    border:2px solid rgba(123,44,191,.22);
+    border-radius:17px;
+    padding:23px;
+    box-shadow:0 12px 40px rgba(48,24,78,.42);
+}
+.modal-contenido .grupo label{color:#17122a}
+.horario-editable{display:flex;align-items:center;gap:8px;min-width:0}
+.horario-editable > span{flex:0 0 auto}
+.horario-casilla{
+    flex:1 1 auto;
+    min-width:0;
+    width:100%;
+    padding:9px 10px;
+    border:2px solid #b9a8d5;
+    border-radius:9px;
+    background:#fff;
+    color:#17122a;
+    font-weight:900;
+    font-size:16px;
+    cursor:pointer;
+    box-sizing:border-box;
+}
+.boton-horario.seleccionado .horario-casilla{
+    border-color:#fff;
+    background:#fff;
+    color:#17122a;
+}
+.boton-horario:not(.seleccionado){background:#eef7ff;border-color:#a9c8df}
+.boton-horario:not(.seleccionado):hover{background:#e0f1ff;border-color:#7b2cbf}
+
 .modal-titulo{margin:0 0 18px;color:#7b2cbf;font-size:25px}
 .grupo{margin-bottom:14px}.grupo label{display:block;font-weight:900;margin-bottom:6px}
 .grupo input,.grupo select,.grupo textarea{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:14px;outline:none}
@@ -148,6 +185,16 @@ header{
     .dia{min-height:340px}
 }
 @media(max-width:500px){
+    .modal{padding:8px;align-items:center}
+    .modal-contenido{
+        width:100%;
+        max-width:none;
+        max-height:94vh;
+        padding:16px;
+        border-radius:16px;
+    }
+    .botones-modal{display:flex;flex-direction:column;gap:8px}
+    .botones-modal button{width:100%;min-width:0}
     .resumen{grid-template-columns:1fr}.logos-principales{padding:0 5px;gap:8px}
     .logo-principal{width:90px;height:90px}.titulo-principal{font-size:25px}
     .extras,.horarios-rapidos,.resumen-pagos{grid-template-columns:1fr}.form-pago{grid-template-columns:1fr}
@@ -314,13 +361,13 @@ header{
 <label>🕐 Horario del evento <span style="font-size:12px;font-weight:normal;color:#666">(Cada casilla se puede modificar. Elegí o escribí el horario que quieras.)</span></label>
 <div class="horarios-rapidos">
     <div id="horario13" class="boton-horario horario-editable" onclick="seleccionarHorarioCasilla(0)">
-        <span>🕐</span><input id="horaCasilla0" class="horario-casilla" type="time" value="13:00" onclick="event.stopPropagation()" onchange="cambiarHorarioCasilla(0)">
+        <span>🕐</span><input id="horaCasilla0" class="horario-casilla" type="time" value="13:00" onclick="event.stopPropagation()" oninput="cambiarHorarioCasilla(0)" onchange="cambiarHorarioCasilla(0)">
     </div>
     <div id="horario17" class="boton-horario horario-editable" onclick="seleccionarHorarioCasilla(1)">
-        <span>🕐</span><input id="horaCasilla1" class="horario-casilla" type="time" value="17:00" onclick="event.stopPropagation()" onchange="cambiarHorarioCasilla(1)">
+        <span>🕐</span><input id="horaCasilla1" class="horario-casilla" type="time" value="17:00" onclick="event.stopPropagation()" oninput="cambiarHorarioCasilla(1)" onchange="cambiarHorarioCasilla(1)">
     </div>
     <div id="horario21" class="boton-horario horario-editable" onclick="seleccionarHorarioCasilla(2)">
-        <span>🕐</span><input id="horaCasilla2" class="horario-casilla" type="time" value="21:00" onclick="event.stopPropagation()" onchange="cambiarHorarioCasilla(2)">
+        <span>🕐</span><input id="horaCasilla2" class="horario-casilla" type="time" value="21:00" onclick="event.stopPropagation()" oninput="cambiarHorarioCasilla(2)" onchange="cambiarHorarioCasilla(2)">
     </div>
 </div>
 <!-- Campo interno: conserva una única hora real para guardar el evento. -->
@@ -424,7 +471,6 @@ header{
     <label class="extra"><input id="extraJugo" type="checkbox" onchange="actualizarPrecioPorExtras()">🧃 Jugo natural — bidón 5 L <span class="precio-extra">+$6.000 c/u</span>
         <input id="cantidadJugo" class="cantidad-extra" type="number" min="1" max="20" value="1" disabled onchange="actualizarPrecioPorExtras()" onclick="event.stopPropagation()">
     </label>
-</div>
 </div>
 </div>
 
@@ -708,6 +754,25 @@ function generarCalendario(){
     actualizarResumen();
 }
 
+function indiceBloqueHorario(hora){
+    const bases=["13:00","17:00","21:00"];
+    const m=horaEnMinutos(hora);
+    if(m===null)return -1;
+
+    let indice=0;
+    let menor=Infinity;
+
+    bases.forEach((base,i)=>{
+        const distancia=Math.abs(horaEnMinutos(base)-m);
+        if(distancia<menor){
+            menor=distancia;
+            indice=i;
+        }
+    });
+
+    return indice;
+}
+
 function crearBloqueSalon(fecha,salon){
     const bloque=document.createElement("div");
     bloque.className="bloque-salon bloque-"+salon.clase;
@@ -734,8 +799,20 @@ function crearBloqueSalon(fecha,salon){
     const lista=document.createElement("div");
     lista.className="lista-horarios";
 
-    HORARIOS.forEach(hora=>crearTurno(lista,fecha,hora,salon));
-    eventosSalon.filter(e=>!HORARIOS.includes(e.hora)).forEach(e=>crearEventoVisual(lista,e,salon));
+    /*
+       Siempre mostramos solamente las 3 casillas.
+       Si el evento es a 16:00, por ejemplo, ocupa la casilla de 17:00
+       y la casilla muestra 16:00. No aparece otra tarjeta debajo.
+    */
+    HORARIOS.forEach((horaBase)=>{
+        const indice=HORARIOS.indexOf(horaBase);
+
+        const evento=eventosSalon.find(e=>{
+            return indiceBloqueHorario(e.hora)===indice;
+        });
+
+        crearTurno(lista,fecha,horaBase,salon,evento);
+    });
 
     bloque.appendChild(lista);
     return bloque;
@@ -774,17 +851,12 @@ function eventoParaHorario(evento,horaBase){
     return inicioEvento===inicioHorario;
 }
 
-function crearTurno(contenedor,fecha,hora,salon){
-    const evento=eventos.find(e=>
-        e.fecha===fecha &&
-        e.salon===salon.nombre &&
-        eventoParaHorario(e,hora)
-    );
+function crearTurno(contenedor,fecha,hora,salon,eventoForzado=null){
+    const evento=eventoForzado || null;
 
     const turno=document.createElement("div");
     turno.className=evento?"turno turno-ocupado":"turno turno-libre";
-    // Guardamos la acción directamente en la casilla para que el clic
-    // siga funcionando aunque se regenere el calendario.
+
     turno.dataset.fecha=fecha;
     turno.dataset.salon=salon.nombre;
     turno.dataset.horaBase=hora;
@@ -794,7 +866,10 @@ function crearTurno(contenedor,fecha,hora,salon){
 
     const horaElemento=document.createElement("div");
     horaElemento.className="turno-hora";
-    horaElemento.textContent="🕐 "+hora;
+
+    // Si está reservado, mostramos la hora REAL del evento.
+    // Si está libre, mostramos el horario de referencia.
+    horaElemento.textContent="🕐 "+(evento ? evento.hora : hora);
     turno.appendChild(horaElemento);
 
     const estado=document.createElement("div");
@@ -803,23 +878,24 @@ function crearTurno(contenedor,fecha,hora,salon){
     turno.appendChild(estado);
 
     if(evento){
-        const horaReal=document.createElement("div");
-        horaReal.style.fontWeight="900";
-        horaReal.textContent="⏰ "+evento.hora;
-        turno.appendChild(horaReal);
-
         const telefono=document.createElement("div");
         telefono.textContent="📞 "+(evento.telefono||"Sin teléfono");
+        telefono.style.fontSize="8px";
+        telefono.style.marginTop="2px";
         turno.appendChild(telefono);
 
-        const deuda=document.createElement("div");
-        deuda.className="evento-deuda";
-        deuda.textContent=deudaEvento(evento)>0?"💰 Debe "+dinero(deudaEvento(evento)):"✅ PAGADO";
-        turno.appendChild(deuda);
+        const deuda=Math.max(0,Number(evento.precio||0)-(
+            Array.isArray(evento.pagos)
+                ? evento.pagos.reduce((t,p)=>t+Number(p.monto||0),0)
+                : 0
+        ));
 
-        turno.title="Editar reserva";
-    }else{
-        turno.title=`Reservar ${salon.nombre} — ${fechaTexto(fecha)} — ${hora}`;
+        const deudaEl=document.createElement("div");
+        deudaEl.style.fontWeight="900";
+        deudaEl.style.fontSize="8px";
+        deudaEl.style.marginTop="2px";
+        deudaEl.textContent=deuda>0 ? "💰 Debe "+dinero(deuda) : "🟢 PAGADO";
+        turno.appendChild(deudaEl);
     }
 
     contenedor.appendChild(turno);
@@ -1184,46 +1260,77 @@ function obtenerHorasCasillas(){
 }
 function seleccionarHorarioCasilla(indice){
     const input=document.getElementById("horaCasilla"+indice);
-    if(!input || !input.value)return;
+    if(!input)return;
+    if(!input.value){
+        input.value=["13:00","17:00","21:00"][indice] || "13:00";
+    }
     document.getElementById("hora").value=input.value;
     actualizarBotonesHorario(indice);
     actualizarDisponibilidad();
 }
+
 function cambiarHorarioCasilla(indice){
     const input=document.getElementById("horaCasilla"+indice);
-    if(!input || !input.value)return;
-    // Al modificar una casilla, esa pasa a ser automáticamente la hora elegida.
-    document.getElementById("hora").value=input.value;
+    if(!input)return;
+
+    // El horario escrito en ESTA casilla queda guardado inmediatamente
+    // y pasa a ser el horario real del evento.
+    const nuevaHora=input.value;
+    if(!nuevaHora)return;
+
+    document.getElementById("hora").value=nuevaHora;
     actualizarBotonesHorario(indice);
     actualizarDisponibilidad();
 }
+
+/*
+   Carga los tres horarios solamente cuando se abre el formulario.
+   Después de eso NO se vuelven a resetear al tocar las casillas.
+*/
 function establecerCasillasHorario(horaEvento=""){
     const base=["13:00","17:00","21:00"];
-    // Si la reserva tiene una hora personalizada, la colocamos en la casilla
-    // más cercana. Así, por ejemplo, 16:00 ocupa visualmente la casilla de 17:00.
-    if(horaEvento && !base.includes(horaEvento)){
-        let objetivo=1;
-        const minutos=h=>{const [hh,mm]=h.split(":").map(Number);return hh*60+mm;};
+
+    if(horaEvento){
+        const minutos=h=>{
+            const [hh,mm]=String(h).split(":").map(Number);
+            return hh*60+mm;
+        };
         const m=minutos(horaEvento);
-        const dist=base.map(h=>Math.abs(minutos(h)-m));
-        objetivo=dist.indexOf(Math.min(...dist));
+
+        // Una reserva personalizada ocupa visualmente la casilla más cercana.
+        let objetivo=0;
+        let menor=Infinity;
+        base.forEach((h,i)=>{
+            const distancia=Math.abs(minutos(h)-m);
+            if(distancia<menor){
+                menor=distancia;
+                objetivo=i;
+            }
+        });
         base[objetivo]=horaEvento;
     }
+
     base.forEach((h,i)=>{
         const input=document.getElementById("horaCasilla"+i);
         if(input)input.value=h;
     });
+
     actualizarBotonesHorario();
 }
+
 function actualizarBotonesHorario(indiceForzado=null){
     document.querySelectorAll(".boton-horario").forEach(b=>b.classList.remove("seleccionado"));
+
     const hora=document.getElementById("hora").value;
     let indice=indiceForzado;
+
     if(indice===null){
         indice=obtenerHorasCasillas().indexOf(hora);
     }
+
     if(indice>=0){
-        const casilla=document.getElementById("horario"+[13,17,21][indice]);
+        const ids=["horario13","horario17","horario21"];
+        const casilla=document.getElementById(ids[indice]);
         if(casilla)casilla.classList.add("seleccionado");
     }
 }
