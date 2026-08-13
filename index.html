@@ -129,6 +129,20 @@ header{
     box-shadow:0 12px 40px rgba(48,24,78,.42);
 }
 .modal-contenido .grupo label{color:#17122a}
+.modal{
+    touch-action:pan-y !important;
+}
+.modal-contenido{
+    touch-action:pan-y !important;
+    overscroll-behavior:contain !important;
+    -webkit-overflow-scrolling:touch !important;
+}
+.modal-contenido input,
+.modal-contenido select,
+.modal-contenido textarea,
+.modal-contenido button{
+    touch-action:manipulation !important;
+}
 .horario-editable{display:flex;align-items:center;gap:8px;min-width:0}
 .horario-editable > span{flex:0 0 auto}
 .horario-casilla{
@@ -295,6 +309,8 @@ header{
     cursor:pointer!important;
     position:relative;
     z-index:50!important;
+    /* El desplazamiento vertical tiene prioridad sobre el click. */
+    touch-action:pan-y!important;
 }
 .calendario .turno *{
     pointer-events:none!important;
@@ -1791,13 +1807,23 @@ function actualizarAlertas(){
 })();
 
 /* ============================================================
-   CLICS DEL CALENDARIO — SISTEMA ROBUSTO
-   Usa pointerdown + elementsFromPoint para que las casillas sigan
-   funcionando incluso si algún elemento transparente se superpone.
+   CLICS DEL CALENDARIO — PROTECCIÓN CONTRA SCROLL TÁCTIL
+   IMPORTANTE:
+   NO se abre una reserva en pointerdown.
+   Primero esperamos a saber si el usuario está tocando o desplazando.
+   Si se desplaza, NO se abre nada.
+   Solo un toque/click real abre la casilla.
 ============================================================ */
 (function activarClicsCalendarioRobustos(){
     let ultimoTurno=null;
     let ultimoMomento=0;
+
+    let gesto=null;
+    let bloquearClicksHasta=0;
+
+    // 15 px de tolerancia: un movimiento normal para hacer scroll
+    // nunca debe interpretarse como un click.
+    const DISTANCIA_MINIMA_SCROLL=20;
 
     function buscarTurnoEnPunto(e){
         if(!e || typeof e.clientX!=="number" || typeof e.clientY!=="number") return null;
@@ -1817,7 +1843,9 @@ function actualizarAlertas(){
         if(!turno) return false;
 
         const ahora=Date.now();
-        if(turno===ultimoTurno && ahora-ultimoMomento<450) return true;
+
+        // Evita doble apertura por el click sintético posterior al touch.
+        if(turno===ultimoTurno && ahora-ultimoMomento<650) return true;
 
         ultimoTurno=turno;
         ultimoMomento=ahora;
@@ -1840,20 +1868,96 @@ function actualizarAlertas(){
         return true;
     }
 
+    /*
+       Guardamos dónde empezó el dedo/mouse, pero NO abrimos nada.
+    */
     document.addEventListener("pointerdown",function(e){
-        const turno=buscarTurnoEnPunto(e);
-        if(turno) abrirTurno(turno,e);
+        // Mientras el formulario está abierto, ningún toque dentro del
+        // formulario puede iniciar un gesto del calendario.
+        const modal=e.target && e.target.closest ? e.target.closest("#modal") : null;
+        if(modal)return;
+
+        if(e.pointerType==="mouse" && e.button!==0)return;
+
+        gesto={
+            pointerId:e.pointerId,
+            x:e.clientX,
+            y:e.clientY,
+            seMovio:false
+        };
     },true);
 
+    /*
+       Si el dedo/mouse se mueve más de 15 px, consideramos que es SCROLL.
+       Desde ese momento se bloquean los clicks derivados de ese gesto.
+    */
+    document.addEventListener("pointermove",function(e){
+        // Los movimientos dentro del formulario pertenecen al scroll del
+        // formulario, no al calendario.
+        if(e.target && e.target.closest && e.target.closest("#modal"))return;
+
+        if(!gesto || e.pointerId!==gesto.pointerId)return;
+
+        const dx=e.clientX-gesto.x;
+        const dy=e.clientY-gesto.y;
+
+        if(Math.hypot(dx,dy)>=DISTANCIA_MINIMA_SCROLL){
+            gesto.seMovio=true;
+            bloquearClicksHasta=Date.now()+800;
+        }
+    },true);
+
+    document.addEventListener("pointercancel",function(e){
+        if(e.target && e.target.closest && e.target.closest("#modal")){
+            gesto=null;
+            return;
+        }
+
+        if(gesto && e.pointerId===gesto.pointerId){
+            gesto.seMovio=true;
+            bloquearClicksHasta=Date.now()+800;
+            gesto=null;
+        }
+    },true);
+
+    document.addEventListener("pointerup",function(e){
+        if(!gesto || e.pointerId!==gesto.pointerId)return;
+
+        if(gesto.seMovio){
+            bloquearClicksHasta=Date.now()+800;
+        }
+
+        gesto=null;
+    },true);
+
+    /*
+       ÚNICO punto que abre una reserva.
+       Si hubo movimiento/scroll, el click queda bloqueado.
+    */
     document.addEventListener("click",function(e){
+        // CRÍTICO: los clicks del formulario jamás deben llegar al
+        // sistema que abre/edita casillas del calendario.
+        const modal=e.target && e.target.closest ? e.target.closest("#modal") : null;
+        if(modal)return;
+
+        if(Date.now()<bloquearClicksHasta){
+            return;
+        }
+
         const turno=buscarTurnoEnPunto(e);
-        if(turno) abrirTurno(turno,e);
+        if(turno){
+            abrirTurno(turno,e);
+        }
     },true);
 
+    // Teclado: Enter/Espacio sí puede abrir una casilla.
     document.addEventListener("keydown",function(e){
         if(e.key!=="Enter" && e.key!==" ") return;
+
         const turno=e.target && e.target.closest ? e.target.closest(".turno") : null;
-        if(turno) abrirTurno(turno,e);
+        if(turno){
+            abrirTurno(turno,e);
+        }
     },true);
 })();
 
