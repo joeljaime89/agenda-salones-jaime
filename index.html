@@ -84,17 +84,17 @@ header{
 .titulo-mes{text-align:center;color:#fff;font-size:29px;font-weight:900;margin:8px 0 13px;text-shadow:0 3px 7px rgba(0,0,0,.25)}
 
 .calendario-contenedor{width:100%;overflow-x:auto;padding-bottom:12px}
-.calendario{min-width:1080px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 7px 25px rgba(0,0,0,.2)}
+.calendario{min-width:1080px;background:linear-gradient(135deg,#f4ecff,#eadbff);border-radius:16px;overflow:hidden;box-shadow:0 7px 25px rgba(84,38,126,.22)}
 .dias-semana{display:grid;grid-template-columns:repeat(7,1fr);background:linear-gradient(135deg,#1565c0,#1976d2);color:#fff}
 .dia-semana{text-align:center;padding:12px 6px;font-weight:900;border-right:1px solid rgba(255,255,255,.25)}
 .dias-mes{display:grid;grid-template-columns:repeat(7,1fr)}
-.dia{min-height:360px;background:#fafafa;border-right:1px solid #ddd;border-bottom:1px solid #ddd;padding:7px}
-.dia:hover{background:#f8f0ff}.dia-vacio{background:#eee}
+.dia{min-height:360px;background:linear-gradient(180deg,#faf5ff,#f1e7ff);border-right:1px solid #d8c7ea;border-bottom:1px solid #d8c7ea;padding:7px}
+.dia:hover{background:linear-gradient(180deg,#f8efff,#eadbff)}.dia-vacio{background:#e7dcef}
 .numero-dia{font-size:18px;font-weight:900;margin-bottom:7px}
 
 /* 4 salones en cuadrícula 2 x 2 */
 .salones-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
-.bloque-salon{border-radius:9px;overflow:hidden;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.13);min-width:0}
+.bloque-salon{border-radius:9px;overflow:hidden;background:rgba(255,255,255,.78);box-shadow:0 2px 6px rgba(74,38,104,.14);min-width:0}
 .bloque-shalom{border:2px solid #e3b900}.encabezado-shalom{background:linear-gradient(135deg,#ffe000,#ffad00);color:#553d00}
 .bloque-mundo{border:2px solid #d00000}.encabezado-mundo{background:linear-gradient(135deg,#ff3333,#a80000);color:#fff}
 .bloque-dios{border:2px solid #198754}.encabezado-dios{background:linear-gradient(135deg,#35c46a,#087f3e);color:#fff}
@@ -103,7 +103,7 @@ header{
 .nombre-salon{font-size:11px;font-weight:900;line-height:1.1}.estado-salon{font-size:8px;font-weight:900;padding:3px 5px;border-radius:20px;background:rgba(255,255,255,.88);white-space:nowrap}
 .lista-horarios{padding:5px}.turno{border-radius:6px;user-select:none;touch-action:manipulation;padding:5px;margin-bottom:4px;cursor:pointer;position:relative;z-index:2;pointer-events:auto;font-size:9px;border:1px solid #ddd;transition:.15s}
 .turno:last-child{margin-bottom:0}.turno:hover{transform:scale(1.012)}
-.turno-libre{background:#e9f8ef;border-color:#198754}.turno-ocupado{background:#ffe8eb;border-color:#dc3545}
+.turno-libre{background:#effff5;border:1px solid #70c994;color:#285b3d}.turno-libre:hover{background:#e2ffed;border-color:#198754}.turno-ocupado{background:linear-gradient(135deg,#d83b67,#8e1742);border:2px solid #6f1234;color:#fff;box-shadow:0 3px 9px rgba(111,18,52,.28)}.turno-ocupado .turno-hora,.turno-ocupado .turno-estado{color:#fff}.turno-ocupado:hover{filter:brightness(1.08);transform:scale(1.012)}
 .turno-hora{font-size:11px;font-weight:900}.turno-estado{margin-top:2px;font-weight:bold}
 .evento{color:#fff;border-radius:7px;margin-top:5px;padding:5px;display:flex;gap:5px;cursor:pointer;box-shadow:0 2px 5px rgba(0,0,0,.2)}
 .evento-shalom{background:linear-gradient(135deg,#ffd000,#ff9200);color:#3c2b00}
@@ -1087,26 +1087,52 @@ function actualizarAlertas(){
     const contenedor=document.getElementById("alertas");
     if(!contenedor)return;
     contenedor.innerHTML="";
-    const hoy=obtenerFechaHoy();
-    const año=fechaActual.getFullYear();
-    const mes=fechaActual.getMonth();
+
+    /*
+        Las alertas muestran SOLO los próximos 7 días, contando hoy.
+
+        Ejemplos:
+        - Si hoy es lunes  -> lunes a domingo.
+        - Si hoy es martes -> martes a lunes.
+        - Si hoy es miércoles -> miércoles a martes.
+
+        De esta forma nunca se muestran alertas de más de una semana.
+    */
+    const hoyTexto=obtenerFechaHoy();
+    const hoy=new Date(hoyTexto+"T00:00:00");
+    const limite=new Date(hoy);
+    limite.setDate(limite.getDate()+6);
+
+    function estaEnProximos7Dias(evento){
+        if(!evento || !evento.fecha)return false;
+        const fecha=new Date(String(evento.fecha)+"T00:00:00");
+        return !Number.isNaN(fecha.getTime()) && fecha>=hoy && fecha<=limite;
+    }
+
+    function rangoAlertasTexto(){
+        return `${fechaTexto(hoyTexto)} al ${fechaTexto(
+            limite.getFullYear()+"-"+String(limite.getMonth()+1).padStart(2,"0")+"-"+String(limite.getDate()).padStart(2,"0")
+        )}`;
+    }
 
     const panelBasicas=document.createElement("section");
     panelBasicas.className="panel-alertas";
-    panelBasicas.innerHTML='<h3 class="titulo-alertas">⚠️ Alertas básicas</h3><div id="listaAlertasBasicas" class="lista-alertas"></div>';
+    panelBasicas.innerHTML=`<h3 class="titulo-alertas">⚠️ Alertas básicas <span style="font-size:12px;font-weight:normal;">(próximos 7 días: ${rangoAlertasTexto()})</span></h3><div id="listaAlertasBasicas" class="lista-alertas"></div>`;
 
     const listaBasicas=panelBasicas.querySelector("#listaAlertasBasicas");
+
+    // Solo deudores dentro de los próximos 7 días.
     const deudores=eventos
-        .filter(e=>deudaEvento(e)>0)
+        .filter(e=>deudaEvento(e)>0 && estaEnProximos7Dias(e))
         .sort((a,b)=>(a.fecha+a.hora).localeCompare(b.fecha+b.hora));
 
     if(!deudores.length){
-        listaBasicas.innerHTML='<div class="sin-alertas">✅ No hay dinero adeudado.</div>';
+        listaBasicas.innerHTML='<div class="sin-alertas">✅ No hay dinero adeudado en los próximos 7 días.</div>';
     }else{
         deudores.forEach(evento=>{
             const alerta=document.createElement("div");
-            alerta.className=evento.fecha===hoy?"alerta alerta-hoy":"alerta";
-            alerta.innerHTML=`${evento.fecha===hoy?"🔔":"⚠️"} <strong>${evento.salon}</strong> — 📅 ${fechaTexto(evento.fecha)} — 🕐 ${evento.hora} — 📞 ${evento.telefono||"Sin teléfono"} — 💰 Debe: <strong>${dinero(deudaEvento(evento))}</strong>${evento.fecha===hoy?" 🔔 EVENTO DE HOY":""}`;
+            alerta.className=evento.fecha===hoyTexto?"alerta alerta-hoy":"alerta";
+            alerta.innerHTML=`${evento.fecha===hoyTexto?"🔔":"⚠️"} <strong>${evento.salon}</strong> — 📅 ${fechaTexto(evento.fecha)} — 🕐 ${evento.hora} — 📞 ${evento.telefono||"Sin teléfono"} — 💰 Debe: <strong>${dinero(deudaEvento(evento))}</strong>${evento.fecha===hoyTexto?" 🔔 EVENTO DE HOY":""}`;
             alerta.style.cursor="pointer";
             alerta.onclick=()=>editarEvento(evento.id);
             listaBasicas.appendChild(alerta);
@@ -1115,24 +1141,23 @@ function actualizarAlertas(){
 
     const panelExtras=document.createElement("section");
     panelExtras.className="panel-alertas";
-    panelExtras.innerHTML=`<h3 class="titulo-alertas">🎪 Alertas de extras — ${MESES[mes]} ${año}</h3><div id="listaAlertasExtras" class="lista-alertas"></div>`;
+    panelExtras.innerHTML=`<h3 class="titulo-alertas">🎪 Alertas de extras <span style="font-size:12px;font-weight:normal;">(próximos 7 días: ${rangoAlertasTexto()})</span></h3><div id="listaAlertasExtras" class="lista-alertas"></div>`;
 
     const listaExtras=panelExtras.querySelector("#listaAlertasExtras");
+
+    // Solo extras dentro de los próximos 7 días.
     const eventosConExtras=eventos
-        .filter(e=>{
-            const f=new Date(String(e.fecha)+"T00:00:00");
-            return f.getFullYear()===año && f.getMonth()===mes && listaExtrasEvento(e).length>0;
-        })
+        .filter(e=>estaEnProximos7Dias(e) && listaExtrasEvento(e).length>0)
         .sort((a,b)=>(a.fecha+a.hora).localeCompare(b.fecha+b.hora));
 
     if(!eventosConExtras.length){
-        listaExtras.innerHTML='<div class="sin-alertas">📭 No hay extras registrados este mes.</div>';
+        listaExtras.innerHTML='<div class="sin-alertas">📭 No hay extras registrados en los próximos 7 días.</div>';
     }else{
         eventosConExtras.forEach(evento=>{
             const extras=listaExtrasEvento(evento);
             const alerta=document.createElement("div");
-            alerta.className="alerta alerta-extra";
-            alerta.innerHTML=`🎪 <strong>${evento.salon}</strong> — 📅 ${fechaTexto(evento.fecha)} — 🕐 ${evento.hora}<div class="extras-linea">${extras.join(" · ")}</div>${evento.nombre?`<div>🎂 ${evento.nombre}</div>`:""}${evento.telefono?`<div>📞 ${evento.telefono}</div>`:""}`;
+            alerta.className=evento.fecha===hoyTexto?"alerta alerta-extra alerta-hoy":"alerta alerta-extra";
+            alerta.innerHTML=`${evento.fecha===hoyTexto?"🔔 ":"🎪 "}<strong>${evento.salon}</strong> — 📅 ${fechaTexto(evento.fecha)} — 🕐 ${evento.hora}<div class="extras-linea">${extras.join(" · ")}</div>${evento.nombre?`<div>🎂 ${evento.nombre}</div>`:""}${evento.telefono?`<div>📞 ${evento.telefono}</div>`:""}${evento.fecha===hoyTexto?"<div><strong>🔔 EVENTO DE HOY</strong></div>":""}`;
             alerta.style.cursor="pointer";
             alerta.onclick=()=>editarEvento(evento.id);
             listaExtras.appendChild(alerta);
